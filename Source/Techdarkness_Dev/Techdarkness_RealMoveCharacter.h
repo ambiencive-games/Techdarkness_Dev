@@ -19,6 +19,11 @@ class ATechdarkness_RealMoveCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Movement) class UTechdarkness_RealCMC* Techdarkness_RealCMC;
+
+	
+
 	/** Pawn mesh: 1st person view (arms; seen only by self) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	USkeletalMeshComponent* Mesh1P;
@@ -37,12 +42,16 @@ class ATechdarkness_RealMoveCharacter : public ACharacter
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* CrouchAction;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SprintAction;
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
-	float maxSpeed;
 	// Sets default values for this character's properties
-	ATechdarkness_RealMoveCharacter();
+	ATechdarkness_RealMoveCharacter(const FObjectInitializer& ObjectInitializer);
+
+	//UPROPERTY(EditDefaultsOnly) float sprint_MaxWalkSpeed;
+	//UPROPERTY(EditDefaultsOnly) float walk_MaxWalkSpeed;
+	//bool bWantsToSprint;
 
 protected:
 	// Called when the game starts or when spawned
@@ -58,6 +67,9 @@ protected:
 	void HandleCrouch();
 	void HandleUnCrouch();
 	void HandleCrouchToggle();
+
+	void SprintPressed();
+	void SprintReleased();
 
 public:
 

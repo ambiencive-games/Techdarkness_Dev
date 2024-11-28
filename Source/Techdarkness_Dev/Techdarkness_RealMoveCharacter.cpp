@@ -2,6 +2,7 @@
 
 
 #include "Techdarkness_RealMoveCharacter.h"
+#include "Techdarkness_RealCMC.h"
 #include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -13,8 +14,10 @@
 
 
 // Sets default values
-ATechdarkness_RealMoveCharacter::ATechdarkness_RealMoveCharacter()
+ATechdarkness_RealMoveCharacter::ATechdarkness_RealMoveCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer.SetDefaultSubobjectClass<UTechdarkness_RealCMC>(ACharacter::CharacterMovementComponentName))
 {
+	Techdarkness_RealCMC = Cast<UTechdarkness_RealCMC>(GetCharacterMovement());
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 
@@ -67,6 +70,10 @@ void ATechdarkness_RealMoveCharacter::SetupPlayerInputComponent(UInputComponent*
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &ATechdarkness_RealMoveCharacter::HandleCrouch);
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ATechdarkness_RealMoveCharacter::HandleUnCrouch);
 		//EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &ATechdarkness_RealMoveCharacter::HandleCrouchToggle);
+
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &ATechdarkness_RealMoveCharacter::SprintPressed);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &ATechdarkness_RealMoveCharacter::SprintReleased);
+		
 	}
 	else
 	{
@@ -80,7 +87,6 @@ void ATechdarkness_RealMoveCharacter::HandleCrouch()
 {
 	if (Controller != nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("crouch"));
 		ACharacter::Crouch();
 	}
 }
@@ -107,16 +113,27 @@ void ATechdarkness_RealMoveCharacter::HandleCrouchToggle()
 	}
 }
 
+void ATechdarkness_RealMoveCharacter::SprintPressed() {
+	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("SPRINT"));
+	Techdarkness_RealCMC->SprintPressed();
+}
+
+void ATechdarkness_RealMoveCharacter::SprintReleased() {
+	Techdarkness_RealCMC->SprintReleased();
+}
+
+
 void ATechdarkness_RealMoveCharacter::Move(const FInputActionValue& Value) {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, MovementVector.ToString());
 		// add movement 
-		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
-		AddMovementInput(GetActorRightVector(), MovementVector.X);
+		Techdarkness_RealCMC->AddInputVector(GetActorForwardVector() * MovementVector.Y);
+		Techdarkness_RealCMC->AddInputVector(GetActorRightVector() * MovementVector.X);
+		//AddMovementInput(GetActorForwardVector(), MovementVector.Y);
+		//AddMovementInput(GetActorRightVector(), MovementVector.X);
 	}
 }
 
