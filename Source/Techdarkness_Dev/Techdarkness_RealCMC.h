@@ -79,6 +79,8 @@ protected:
 
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 
+	void Parkour();
+
 private:
 	void EnterSlide();
 	void ExitSlide();

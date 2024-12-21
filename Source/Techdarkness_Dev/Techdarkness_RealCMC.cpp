@@ -100,13 +100,11 @@ bool UTechdarkness_RealCMC::CanCrouchInCurrentState() const
 void UTechdarkness_RealCMC::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
 {
 	if (MovementMode == MOVE_Walking && bWantsToCrouch) {
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("ch cr"));
 		if (bReadyForSlide) {
 			FHitResult PotentialSlideSurface;
 			if (Velocity.SizeSquared() > pow(Slide_MinSpeed, 2) && GetSlideSurface(PotentialSlideSurface)) {
 				bReadyForSlide = false;
 				EnterSlide();
-				GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("enterslide"));
 			}
 		}
 	}
@@ -126,7 +124,6 @@ void UTechdarkness_RealCMC::UpdateCharacterStateBeforeMovement(float DeltaSecond
 void UTechdarkness_RealCMC::PhysCustom(float deltaTime, int32 Iterations)
 {
 	Super::PhysCustom(deltaTime, Iterations);
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("physcustom"));
 	switch (CustomMovementMode) {
 	case CMOVE_Slide:
 		PhysSlide(deltaTime, Iterations);
@@ -134,6 +131,15 @@ void UTechdarkness_RealCMC::PhysCustom(float deltaTime, int32 Iterations)
 	default:
 		UE_LOG(LogTemp, Fatal, TEXT("Invalid Movement Mode"));
 	}
+}
+
+void UTechdarkness_RealCMC::Parkour() // not done yet
+{
+	FHitResult Hit;
+	FVector Start = UpdatedComponent->GetComponentLocation();
+	FVector End = Start + CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() * CharacterOwner->GetActorForwardVector();
+	FName ProfileName = TEXT("BlockAll");
+	GetWorld()->LineTraceSingleByProfile(Hit, Start, End, ProfileName, RealMoveCharacterOwner->GetIgnoreCharacterParams());
 }
 
 UTechdarkness_RealCMC::UTechdarkness_RealCMC() {
@@ -220,7 +226,6 @@ void UTechdarkness_RealCMC::PhysSlide(float deltaTime, int32 Iterations)
 
 bool UTechdarkness_RealCMC::GetSlideSurface(FHitResult& Hit) const
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("getslidesurf"));
 	FVector Start = UpdatedComponent->GetComponentLocation();
 	FVector End = Start + CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 2.f * FVector::DownVector;
 	FName ProfileName = TEXT("BlockAll");
@@ -230,13 +235,11 @@ bool UTechdarkness_RealCMC::GetSlideSurface(FHitResult& Hit) const
 void UTechdarkness_RealCMC::SprintPressed()
 {
 	Safe_bWantsToSprint = true;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("SPRINT"));
 }
 
 void UTechdarkness_RealCMC::SprintReleased()
 {
 	Safe_bWantsToSprint = false;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, TEXT("unSPRINT"));
 }
 
 void UTechdarkness_RealCMC::ChrouchPressed()

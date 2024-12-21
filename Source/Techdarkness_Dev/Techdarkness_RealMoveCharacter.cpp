@@ -97,22 +97,10 @@ FCollisionQueryParams ATechdarkness_RealMoveCharacter::GetIgnoreCharacterParams(
 void ATechdarkness_RealMoveCharacter::HandleCrouch()
 {
 	Techdarkness_RealCMC->ChrouchPressed();
-	/*
-	if (Controller != nullptr)
-	{
-		ACharacter::Crouch();
-	}
-	*/
 }
 void ATechdarkness_RealMoveCharacter::HandleUnCrouch()
 {
 	Techdarkness_RealCMC->ChrouchReleased();
-	/*
-	if (Controller != nullptr)
-	{
-		ACharacter::UnCrouch();
-	}
-	*/
 }
 
 void ATechdarkness_RealMoveCharacter::HandleCrouchToggle()
@@ -131,14 +119,10 @@ void ATechdarkness_RealMoveCharacter::HandleCrouchToggle()
 }
 
 void ATechdarkness_RealMoveCharacter::SprintPressed() {
-	//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("SPRINT"));
-	//ACharacter::GetCharacterMovement()->MaxWalkSpeed = walkSpeedSprint;
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("sprint"));
 	Techdarkness_RealCMC->SprintPressed();
 }
 
 void ATechdarkness_RealMoveCharacter::SprintReleased() {
-	//ACharacter::GetCharacterMovement()->MaxWalkSpeed = walkSpeedNormal;
 	Techdarkness_RealCMC->SprintReleased();
 }
 
@@ -149,14 +133,8 @@ void ATechdarkness_RealMoveCharacter::Move(const FInputActionValue& Value) {
 
 	if (Controller != nullptr)
 	{
-		// add movement 
-		//Techdarkness_RealCMC->AddInputVector(GetActorForwardVector() * MovementVector.Y);
-		//Techdarkness_RealCMC->AddInputVector(GetActorRightVector() * MovementVector.X);
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
 		AddMovementInput(GetActorRightVector(), MovementVector.X);
-
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, MovementVector.ToString());
-		//GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, Techdarkness_RealCMC->Velocity.ToString());
 	}
 }
 
