@@ -22,7 +22,8 @@ class ATechdarkness_RealMoveCharacter : public ACharacter
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Movement) class UTechdarkness_RealCMC* Techdarkness_RealCMC;
 
-	
+	UPROPERTY(EditDefaultsOnly) float walkSpeedSprint = 1000;
+	UPROPERTY(EditDefaultsOnly) float walkSpeedNormal= 500;
 
 	/** Pawn mesh: 1st person view (arms; seen only by self) */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
@@ -89,5 +90,7 @@ public:
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	/** Returns FirstPersonCameraComponent subobject **/
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	FCollisionQueryParams GetIgnoreCharacterParams() const;
 
 };
