@@ -83,6 +83,7 @@ void UTechdarkness_RealCMC::OnMovementUpdated(float DeltaSeconds, const FVector&
 		}
 	}
 	Safe_bPrevWantsToCrouch = bWantsToCrouch;
+	Parkour();
 }
 
 bool UTechdarkness_RealCMC::IsMovingOnGround() const
@@ -137,9 +138,50 @@ void UTechdarkness_RealCMC::Parkour() // not done yet
 {
 	FHitResult Hit;
 	FVector Start = UpdatedComponent->GetComponentLocation();
-	FVector End = Start + CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() * CharacterOwner->GetActorForwardVector();
+	FVector End = Start + (CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() + 1.f) * CharacterOwner->GetActorForwardVector();
 	FName ProfileName = TEXT("BlockAll");
+	DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false, 1.f, 0.f, 2.f);
 	GetWorld()->LineTraceSingleByProfile(Hit, Start, End, ProfileName, RealMoveCharacterOwner->GetIgnoreCharacterParams());
+
+	if (Hit.bBlockingHit) {
+		DrawDebugSphere(GetWorld(), Hit.Location, 5, 10, FColor::Red, 0.f, 2.f);
+	}
+	else {
+		return;
+	}
+	//FHitResult HitUp;
+	TArray<FHitResult, TSizedDefaultAllocator<32>> HitUp;
+	//TArray<FOverlapResult> outOverlaps = TArray<FOverlapResult>();
+	FVector StartUp = Hit.Location;
+	float heightParkour = 200.f;
+	FVector EndUp = StartUp + FVector::UpVector * heightParkour;
+	//GetWorld()->LineTraceSingleByProfile(HitUp, StartUp, EndUp, ProfileName, RealMoveCharacterOwner->GetIgnoreCharacterParams());
+	GetWorld()->LineTraceMultiByProfile(HitUp, EndUp, StartUp, ProfileName, RealMoveCharacterOwner->GetIgnoreCharacterParams());
+	DrawDebugLine(GetWorld(), EndUp, StartUp, FColor::Yellow, false, 1.f, 0.f, 2.f);
+	//bool isHaveHit = false;
+	for(FHitResult h : HitUp)
+	{
+		if (h.bBlockingHit) {
+			DrawDebugSphere(GetWorld(), h.Location, 10, 10, FColor::Orange, 0.f, 2.f);
+
+			Start = h.Location + (CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() + 1.f) * 2.f * FVector::UpVector;
+			End = h.Location + FVector::UpVector;
+			DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false, 1.f, 0.f, 2.f);
+			GetWorld()->LineTraceSingleByProfile(Hit, Start, End, ProfileName, RealMoveCharacterOwner->GetIgnoreCharacterParams());
+			if (Hit.bBlockingHit == false) {
+				GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Red, TEXT("up!"));
+				CharacterOwner->TeleportTo(h.Location + CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * FVector::UpVector, CharacterOwner->GetActorRotation());
+			}
+			//isHaveHit = GetWorld()->ComponentOverlapMulti(outOverlaps, Cast<UPrimitiveComponent>(CharacterOwner->GetCapsuleComponent()), h.Location, CharacterOwner->GetActorRotation());
+			//if (isHaveHit == false) {
+			//	break;
+			//}
+		}
+	}
+	//CharacterOwner->GetCapsuleComponent()->ComponentOverlapMulti();
+	//CharacterOwner->GetCapsuleComponent()->K2_BoxOverlapComponent();
+	//GetWorld()->ComponentOverlapMulti(outOverlaps, Cast<UPrimitiveComponent>(CharacterOwner->GetCapsuleComponent()), EndUp, CharacterOwner->GetActorRotation());
+	
 }
 
 UTechdarkness_RealCMC::UTechdarkness_RealCMC() {
