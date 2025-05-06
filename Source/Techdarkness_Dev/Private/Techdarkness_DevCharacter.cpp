@@ -1,108 +1,116 @@
-// Techdarkness_DevCharacter.cpp
-
+// --- Techdarkness_DevCharacter.cpp ---
 #include "Techdarkness_DevCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/InputComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
+
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
+
 ATechdarkness_DevCharacter::ATechdarkness_DevCharacter()
 {
-    // Set size for collision capsule
-    GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
+    GetCapsuleComponent()->InitCapsuleSize(35.f, 96.0f);
 
-    // Create a CameraComponent
+
+    // КАМЕРА — чуть впереди и выше "шейного позвонка"
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
-    FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
-    FirstPersonCameraComponent->SetRelativeLocation(FVector(-10.f, 0.f, 60.f));
+    FirstPersonCameraComponent->SetupAttachment(GetMesh(), TEXT("CameraSocket"));
+    //FirstPersonCameraComponent->SetRelativeLocation(FVector(12.f, 0.f, 74.f)); // настрой и высоту, и смещение вперёд
     FirstPersonCameraComponent->bUsePawnControlRotation = true;
 
-    // Create a mesh for the player’s arms
-    Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
-    Mesh1P->SetOnlyOwnerSee(true);
-    Mesh1P->SetupAttachment(FirstPersonCameraComponent);
-    Mesh1P->bCastDynamicShadow = false;
-    Mesh1P->CastShadow = false;
-    Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
+
+    // Один тпс-меш (GetMesh) — для всех режимов
+    GetMesh()->SetupAttachment(GetCapsuleComponent());
+    GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -96.f));
+    GetMesh()->SetOwnerNoSee(false); // видим всегда (self-body)
+    GetMesh()->SetOnlyOwnerSee(false);
+    GetMesh()->CastShadow = true;
+    GetMesh()->bCastDynamicShadow = true;
+    GetMesh()->bCastHiddenShadow = true;
+    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+
+    GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+    bUseControllerRotationYaw = true;
+    bIsClimbing = false;
 }
+
 
 void ATechdarkness_DevCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Регистрация mapping context
-    APlayerController* PlayerController = Cast<APlayerController>(Controller);
-    if (PlayerController)
-    {
-        if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
-        {
+    // Инпут система
+    if (APlayerController* PC = Cast<APlayerController>(Controller))
+        if (ULocalPlayer* LocalPlayer = PC->GetLocalPlayer())
             if (UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
-            {
                 if (DefaultMappingContext)
-                {
-                    // Priority = 0 (базовый)
                     InputSubsystem->AddMappingContext(DefaultMappingContext, 0);
-                }
-                else
-                {
-                    UE_LOG(LogTemplateCharacter, Warning, TEXT("DefaultMappingContext не назначен на персонаже %s"), *GetNameSafe(this));
-                }
-            }
-        }
-    }
 }
+
 
 void ATechdarkness_DevCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     check(PlayerInputComponent);
 
+
     if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
     {
-        // Jumping
-        if (JumpAction)
-        {
-            EnhancedInput->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-            EnhancedInput->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-        }
-        // Moving
         if (MoveAction)
-        {
             EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATechdarkness_DevCharacter::Move);
-        }
-        // Looking
         if (LookAction)
-        {
             EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATechdarkness_DevCharacter::Look);
+        if (CrouchAction) {
+            EnhancedInput->BindAction(CrouchAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::StartCrouch);
+            EnhancedInput->BindAction(CrouchAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::StopCrouch);
         }
-    }
-    else
-    {
-        UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input Component! You must use Enhanced Input with this character."), *GetNameSafe(this));
+        if (ClimbAction) {
+            EnhancedInput->BindAction(ClimbAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::TryClimb);
+            EnhancedInput->BindAction(ClimbAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::StopClimb);
+        }
     }
 }
+
 
 void ATechdarkness_DevCharacter::Move(const FInputActionValue& Value)
 {
     FVector2D MovementVector = Value.Get<FVector2D>();
-
-    if (Controller)
-    {
+    if (Controller && !bIsClimbing) {
         AddMovementInput(GetActorForwardVector(), MovementVector.Y);
         AddMovementInput(GetActorRightVector(), MovementVector.X);
     }
 }
 
+
 void ATechdarkness_DevCharacter::Look(const FInputActionValue& Value)
 {
     FVector2D LookAxisVector = Value.Get<FVector2D>();
-
-    if (Controller)
+    if (Controller && !bIsClimbing)
     {
         AddControllerYawInput(LookAxisVector.X);
         AddControllerPitchInput(LookAxisVector.Y);
     }
+
+
+    // ПЕРЕДАЕМ Pitch в AnimBP для наклона тела (корректно Clamp в пределах)
+    if (FirstPersonCameraComponent) {
+        float Pitch = FirstPersonCameraComponent->GetComponentRotation().Pitch;
+        LookPitch = UKismetMathLibrary::NormalizeAxis(Pitch);
+    }
+}
+
+
+void ATechdarkness_DevCharacter::StartCrouch()   { Crouch();  }
+void ATechdarkness_DevCharacter::StopCrouch()    { UnCrouch();}
+void ATechdarkness_DevCharacter::TryClimb()      { bIsClimbing = true;  }
+void ATechdarkness_DevCharacter::StopClimb()     { bIsClimbing = false; }
+void ATechdarkness_DevCharacter::SetCinematicMode(bool bCinematic)
+{
+    GetMesh()->SetVisibility(!bCinematic, true);
 }

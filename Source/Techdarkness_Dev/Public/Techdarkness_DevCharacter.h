@@ -1,6 +1,6 @@
-// Techdarkness_DevCharacter.h
-
+// --- Techdarkness_DevCharacter.h ---
 #pragma once
+
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
@@ -8,62 +8,68 @@
 #include "InputActionValue.h"
 #include "Techdarkness_DevCharacter.generated.h"
 
-class UInputComponent;
-class USkeletalMeshComponent;
+
 class UCameraComponent;
-class UInputAction;
+class UInputComponent;
 class UInputMappingContext;
+class UInputAction;
+
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
+
 
 UCLASS(config=Game)
 class ATechdarkness_DevCharacter : public ACharacter
 {
-    GENERATED_BODY()
-
-    // === FIRST PERSON COMPONENTS ===
-    /** Pawn mesh: 1st person view (arms; seen only by self) */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Mesh, meta = (AllowPrivateAccess = true))
-    USkeletalMeshComponent* Mesh1P;
-
-    /** First person camera */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = true))
-    UCameraComponent* FirstPersonCameraComponent;
-
-    // === INPUT SYSTEM ===
-    /** Input mapping context */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = true))
-    UInputMappingContext* DefaultMappingContext;
-
-    /** Jump Input Action */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = true))
-    UInputAction* JumpAction;
-
-    /** Move Input Action */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = true))
-    UInputAction* MoveAction;
-
-    /** Look Input Action */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = true))
-    UInputAction* LookAction;
+	GENERATED_BODY()
     
 public:
-    ATechdarkness_DevCharacter();
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera, meta = (AllowPrivateAccess = "true"))
+	UCameraComponent* FirstPersonCameraComponent;
 
-    /** Returns Mesh1P subobject **/
-    USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
-    /** Returns FirstPersonCameraComponent subobject **/
-    UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputMappingContext* DefaultMappingContext;
+
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MoveAction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LookAction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* CrouchAction;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ClimbAction;
+
+
+	ATechdarkness_DevCharacter();
+
 
 protected:
-    virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
+	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
-    /** Called for movement input */
-    void Move(const FInputActionValue& Value);
 
-    /** Called for looking input */
-    void Look(const FInputActionValue& Value);
+	void Move(const FInputActionValue& Value);
+	void Look(const FInputActionValue& Value);
 
-    // APawn interface
-    virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+
+	void StartCrouch();
+	void StopCrouch();
+
+
+	void TryClimb();
+	void StopClimb();
+
+
+	void SetCinematicMode(bool bCinematic);
+
+
+	// --- Real Body ---
+	/** Передача Pitch камеры для анимационного наклона туловища */
+	UPROPERTY(BlueprintReadOnly, Category="Look")
+	float LookPitch = 0;
+
+
+	bool bIsClimbing = false;
 };
