@@ -141,13 +141,13 @@ protected:
     UFUNCTION(BlueprintCallable, Category="Sprint")
     void SprintLoop();
 
-    UPROPERTY(BlueprintCallable, Category="Sprint")
+    UPROPERTY(BlueprintReadWrite, Category="Sprint")
     float SprintSpeed = 1200.f;
 
-    UPROPERTY(BlueprintCallable, Category="Sprint")
+    UPROPERTY(BlueprintReadWrite, Category="Sprint")
     float AccelerationInterpSpeed = 8.f;
 
-    UPROPERTY(BlueprintCallable, Category="Sprint")
+    UPROPERTY(BlueprintReadWrite, Category="Sprint")
     float StaminaDrainPerSecond = 15.f;
 
     FTimerHandle SprintTimerHandle;
