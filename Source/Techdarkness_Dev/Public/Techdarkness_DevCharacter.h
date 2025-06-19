@@ -124,7 +124,7 @@ public:
     /** Последнее вертикальное значение input'а */
     float LastVerticalInput = 0.f;
 
-    //-----Система Статов-----
+    //-----Компонент статов-----
 protected:
     /** Компонент для управления статов персонажа */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Stats", meta=(AllowPrivateAccess="true"))
@@ -132,33 +132,31 @@ protected:
 
    //-----Спринт-----
 protected:
-    UFUNCTION()
+    UFUNCTION(BlueprintCallable, Category="Sprint")
     void SprintStart();
 
-    UFUNCTION()
+    UFUNCTION(BlueprintCallable, Category="Sprint")
     void SprintEnds();
 
-    UFUNCTION()
+    UFUNCTION(BlueprintCallable, Category="Sprint")
     void SprintLoop();
 
-    UPROPERTY()
+    UPROPERTY(BlueprintCallable, Category="Sprint")
     float SprintSpeed = 1200.f;
 
-    //UPROPERTY(EditDefaultsOnly, Category="Sprint")
-    //bool bIsSprinting;
-
-    UPROPERTY()
+    UPROPERTY(BlueprintCallable, Category="Sprint")
     float AccelerationInterpSpeed = 8.f;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintCallable, Category="Sprint")
     float StaminaDrainPerSecond = 15.f;
 
     FTimerHandle SprintTimerHandle;
 
-    UPROPERTY()
+    UPROPERTY(EditDefaultsOnly, Category="Sprint")
     float BaseSpeed;
 
-    // ---- Функции для рестора стамины ----
+    // ---- Система стамины ----
+protected:
     UFUNCTION(BlueprintCallable, Category="Stats")
     void RestoreStaminaLoop();
 
