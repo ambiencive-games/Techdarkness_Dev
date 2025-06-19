@@ -8,7 +8,9 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Ladder.h"
 #include "DrawDebugHelpers.h"
+#include "StatsComponent.h"
 #include "TimerManager.h"
+
 ATechdarkness_DevCharacter::ATechdarkness_DevCharacter()
 {
     // Инициализация капсулы персонажа
@@ -33,6 +35,13 @@ ATechdarkness_DevCharacter::ATechdarkness_DevCharacter()
     LastVerticalInput = 0.f;
     // Отключаем тик, не требуется
     PrimaryActorTick.bCanEverTick = false;
+
+    StatsComponent = CreateDefaultSubobject<UStatsComponent>(TEXT("StatsComponent"));
+    StatsComponent->GetHealth();
+    StatsComponent->MaxHealth = 100.0f; 
+    StatsComponent->CurrentHealth = StatsComponent->MaxHealth;
+    StatsComponent->MaxStamina = 100.0f;
+    StatsComponent->CurrentStamina = StatsComponent->MaxStamina;
 }
 
 void ATechdarkness_DevCharacter::BeginPlay()
@@ -42,6 +51,9 @@ void ATechdarkness_DevCharacter::BeginPlay()
     DefaultCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
     DefaultGroundFriction = GetCharacterMovement()->GroundFriction;
     DefaultBrakingFriction = GetCharacterMovement()->BrakingFrictionFactor;
+
+    BaseSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
     // Добавляем контекст управления (input mapping)
     if (APlayerController* PC = Cast<APlayerController>(Controller))
     {
@@ -80,6 +92,11 @@ void ATechdarkness_DevCharacter::SetupPlayerInputComponent(UInputComponent* Play
         {
             EnhancedInput->BindAction(SlideAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::StartSlide);
             EnhancedInput->BindAction(SlideAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::OnSlideReleased);
+        }
+        if(SprintAction)
+        {
+            EnhancedInput->BindAction(SprintAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::SprintStart);
+            EnhancedInput->BindAction(SprintAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::SprintEnds);
         }
     }
 }
@@ -299,4 +316,79 @@ void ATechdarkness_DevCharacter::OnMovementModeChanged(EMovementMode PrevMode, u
     {
         StopSlide();
     }
+}
+
+// ----- Функции для спринта -----
+void ATechdarkness_DevCharacter::SprintStart()
+{
+    if (CurrentActionState == EActionState::EAS_Unoccupied && 
+        StatsComponent && 
+        StatsComponent->GetStamina() > 0.f)
+    {
+        CurrentActionState = EActionState::EAS_Sprinting;
+        GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &ATechdarkness_DevCharacter::SprintLoop, 0.01f, true);
+        RestoreStaminaEnd();
+    } 
+}
+
+void ATechdarkness_DevCharacter::SprintEnds()
+{
+    if (EActionState::EAS_Sprinting == CurrentActionState)
+    {
+        CurrentActionState = EActionState::EAS_Unoccupied;
+        GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
+        GetCharacterMovement()->MaxWalkSpeed = BaseSpeed;
+        RestoreStaminaStart();
+    }
+}
+
+void ATechdarkness_DevCharacter::SprintLoop()
+{
+    if (!StatsComponent) return;
+
+    const float DeltaTime = GetWorld()->GetDeltaSeconds();
+
+    if (StatsComponent->GetStamina() <= 0.f)
+    {
+        StatsComponent->CurrentStamina = 0.f;
+        SprintEnds();
+        return;
+    }
+
+    StatsComponent->DrainStamina(StaminaDrainPerSecond * DeltaTime);
+
+    // Интерполяция скорости
+    float CurrentSpeed = GetCharacterMovement()->MaxWalkSpeed;
+    float NewSpeed = FMath::FInterpTo(CurrentSpeed, SprintSpeed, DeltaTime, AccelerationInterpSpeed);
+    GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
+}
+
+// ----- Функции для стамины -----
+void ATechdarkness_DevCharacter::RestoreStaminaStart()
+{
+    if (!StatsComponent || StatsComponent->IsStaminaFull() || EActionState::EAS_Sprinting == CurrentActionState)
+    {
+        return;
+    }
+    
+    GetWorldTimerManager().SetTimer(StaminaRegenTimerHandle, this, &ATechdarkness_DevCharacter::RestoreStaminaLoop, 0.5f, true);
+    
+}
+
+void ATechdarkness_DevCharacter::RestoreStaminaEnd()
+{
+    GetWorldTimerManager().ClearTimer(StaminaRegenTimerHandle);
+}
+
+void ATechdarkness_DevCharacter::RestoreStaminaLoop()
+{
+    if (!StatsComponent || StatsComponent->IsStaminaFull())
+    {
+        RestoreStaminaEnd();
+        return;
+    }
+
+    const float DeltaTime = GetWorld()->GetDeltaSeconds();
+
+    StatsComponent->RestoreStamina(RestoreStaminaRate * DeltaTime); 
 }

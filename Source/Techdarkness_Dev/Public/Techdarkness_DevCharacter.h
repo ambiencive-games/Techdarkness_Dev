@@ -8,10 +8,19 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 class ALadder;
+class UStatsComponent;
 /**
  * Класс персонажа для проекта Techdarkness.
  * Реализует управление, лазание по лестнице и скольжение (slide).
  */
+
+UENUM(BlueprintType)
+enum class EActionState : uint8
+{
+    EAS_Unoccupied      UMETA(DisplayName = "Unoccupied"),
+    EAS_Sprinting       UMETA(DisplayName = "Sprinting")
+};
+
 UCLASS(config=Game)
 class TECHDARKNESS_DEV_API ATechdarkness_DevCharacter : public ACharacter
 {
@@ -19,6 +28,9 @@ class TECHDARKNESS_DEV_API ATechdarkness_DevCharacter : public ACharacter
 public:
     // Конструктор персонажа
     ATechdarkness_DevCharacter();
+    // --- Состояние ---
+    UPROPERTY()
+    EActionState CurrentActionState;
     // --- Камера ---
     /** Компонент камеры от первого лица */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -39,6 +51,9 @@ public:
     /** Экшен скольжения */
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
     UInputAction* SlideAction;
+    /** Экшен спринта */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
+    UInputAction* SprintAction;
     // --- Значение Pitch камеры, для анимаций ---
     UPROPERTY(BlueprintReadOnly, Category="Anim")
     float LookPitch = 0.f;
@@ -108,4 +123,53 @@ public:
     bool bCanClimbLadder = false;
     /** Последнее вертикальное значение input'а */
     float LastVerticalInput = 0.f;
+
+    //-----Система Статов-----
+protected:
+    /** Компонент для управления статов персонажа */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Stats", meta=(AllowPrivateAccess="true"))
+    UStatsComponent* StatsComponent;
+
+   //-----Спринт-----
+protected:
+    UFUNCTION()
+    void SprintStart();
+
+    UFUNCTION()
+    void SprintEnds();
+
+    UFUNCTION()
+    void SprintLoop();
+
+    UPROPERTY()
+    float SprintSpeed = 1200.f;
+
+    //UPROPERTY(EditDefaultsOnly, Category="Sprint")
+    //bool bIsSprinting;
+
+    UPROPERTY()
+    float AccelerationInterpSpeed = 8.f;
+
+    UPROPERTY()
+    float StaminaDrainPerSecond = 15.f;
+
+    FTimerHandle SprintTimerHandle;
+
+    UPROPERTY()
+    float BaseSpeed;
+
+    // ---- Функции для рестора стамины ----
+    UFUNCTION(BlueprintCallable, Category="Stats")
+    void RestoreStaminaLoop();
+
+    UFUNCTION(BlueprintCallable, Category="Stats")
+    void RestoreStaminaStart();
+
+    UFUNCTION(BlueprintCallable, Category="Stats")
+    void RestoreStaminaEnd();
+
+    UPROPERTY(EditDefaultsOnly, Category="Stats")
+    float RestoreStaminaRate = 500.f; 
+
+    FTimerHandle StaminaRegenTimerHandle;
 };
