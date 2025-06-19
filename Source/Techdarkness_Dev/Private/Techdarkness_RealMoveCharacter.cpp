@@ -96,11 +96,11 @@ FCollisionQueryParams ATechdarkness_RealMoveCharacter::GetIgnoreCharacterParams(
 
 void ATechdarkness_RealMoveCharacter::HandleCrouch()
 {
-	Techdarkness_RealCMC->ChrouchPressed();
+	Techdarkness_RealCMC->CrouchPressed();
 }
 void ATechdarkness_RealMoveCharacter::HandleUnCrouch()
 {
-	Techdarkness_RealCMC->ChrouchReleased();
+	Techdarkness_RealCMC->CrouchReleased();
 }
 
 void ATechdarkness_RealMoveCharacter::HandleCrouchToggle()
