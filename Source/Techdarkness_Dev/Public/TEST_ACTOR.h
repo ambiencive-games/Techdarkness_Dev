@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "TEST_ACTOR.generated.h"
 
-class UStatsComponent;
+class UTechdarkness_DevHealthStaminaComponent;
 class ATechdarkness_DevCharacter;
 
 UCLASS()

@@ -4,17 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "StatsComponent.generated.h"
+#include "Techdarkness_DevHealthStaminaComponent.generated.h"
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class TECHDARKNESS_DEV_API UStatsComponent : public UActorComponent
+class TECHDARKNESS_DEV_API UTechdarkness_DevHealthStaminaComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:	
 	// Sets default values for this component's properties
-	UStatsComponent();
+	UTechdarkness_DevHealthStaminaComponent();
 
 protected:
 	// Called when the game starts

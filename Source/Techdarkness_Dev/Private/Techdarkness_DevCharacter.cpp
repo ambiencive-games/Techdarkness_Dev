@@ -8,7 +8,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Ladder.h"
 #include "DrawDebugHelpers.h"
-#include "StatsComponent.h"
+#include "Techdarkness_DevHealthStaminaComponent.h"
 #include "TimerManager.h"
 
 ATechdarkness_DevCharacter::ATechdarkness_DevCharacter()
@@ -36,12 +36,12 @@ ATechdarkness_DevCharacter::ATechdarkness_DevCharacter()
     // Отключаем тик, не требуется
     PrimaryActorTick.bCanEverTick = false;
 
-    StatsComponent = CreateDefaultSubobject<UStatsComponent>(TEXT("StatsComponent"));
-    StatsComponent->GetHealth();
-    StatsComponent->MaxHealth = 100.0f; 
-    StatsComponent->CurrentHealth = StatsComponent->MaxHealth;
-    StatsComponent->MaxStamina = 100.0f;
-    StatsComponent->CurrentStamina = StatsComponent->MaxStamina;
+    Techdarkness_DevHealthStaminaComponent = CreateDefaultSubobject<UTechdarkness_DevHealthStaminaComponent>(TEXT("Techdarkness_DevHealthStaminaComponent"));
+    Techdarkness_DevHealthStaminaComponent->GetHealth();
+    Techdarkness_DevHealthStaminaComponent->MaxHealth = 100.0f; 
+    Techdarkness_DevHealthStaminaComponent->CurrentHealth = Techdarkness_DevHealthStaminaComponent->MaxHealth;
+    Techdarkness_DevHealthStaminaComponent->MaxStamina = 100.0f;
+    Techdarkness_DevHealthStaminaComponent->CurrentStamina = Techdarkness_DevHealthStaminaComponent->MaxStamina;
 }
 
 void ATechdarkness_DevCharacter::BeginPlay()
@@ -322,8 +322,8 @@ void ATechdarkness_DevCharacter::OnMovementModeChanged(EMovementMode PrevMode, u
 void ATechdarkness_DevCharacter::SprintStart()
 {
     if (CurrentActionState == EActionState::EAS_Unoccupied && 
-        StatsComponent && 
-        StatsComponent->GetStamina() > 0.f)
+        Techdarkness_DevHealthStaminaComponent && 
+        Techdarkness_DevHealthStaminaComponent->GetStamina() > 0.f)
     {
         CurrentActionState = EActionState::EAS_Sprinting;
         GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &ATechdarkness_DevCharacter::SprintLoop, 0.01f, true);
@@ -344,18 +344,18 @@ void ATechdarkness_DevCharacter::SprintEnds()
 
 void ATechdarkness_DevCharacter::SprintLoop()
 {
-    if (!StatsComponent) return;
+    if (!Techdarkness_DevHealthStaminaComponent) return;
 
     const float DeltaTime = GetWorld()->GetDeltaSeconds();
 
-    if (StatsComponent->GetStamina() <= 0.f)
+    if (Techdarkness_DevHealthStaminaComponent->GetStamina() <= 0.f)
     {
-        StatsComponent->CurrentStamina = 0.f;
+        Techdarkness_DevHealthStaminaComponent->CurrentStamina = 0.f;
         SprintEnds();
         return;
     }
 
-    StatsComponent->DrainStamina(StaminaDrainPerSecond * DeltaTime);
+    Techdarkness_DevHealthStaminaComponent->DrainStamina(StaminaDrainPerSecond * DeltaTime);
 
     // Интерполяция скорости
     float CurrentSpeed = GetCharacterMovement()->MaxWalkSpeed;
@@ -366,7 +366,7 @@ void ATechdarkness_DevCharacter::SprintLoop()
 // ----- Функции для стамины -----
 void ATechdarkness_DevCharacter::RestoreStaminaStart()
 {
-    if (!StatsComponent || StatsComponent->IsStaminaFull() || EActionState::EAS_Sprinting == CurrentActionState)
+    if (!Techdarkness_DevHealthStaminaComponent || Techdarkness_DevHealthStaminaComponent->IsStaminaFull() || EActionState::EAS_Sprinting == CurrentActionState)
     {
         return;
     }
@@ -382,7 +382,7 @@ void ATechdarkness_DevCharacter::RestoreStaminaEnd()
 
 void ATechdarkness_DevCharacter::RestoreStaminaLoop()
 {
-    if (!StatsComponent || StatsComponent->IsStaminaFull())
+    if (!Techdarkness_DevHealthStaminaComponent || Techdarkness_DevHealthStaminaComponent->IsStaminaFull())
     {
         RestoreStaminaEnd();
         return;
@@ -390,5 +390,5 @@ void ATechdarkness_DevCharacter::RestoreStaminaLoop()
 
     const float DeltaTime = GetWorld()->GetDeltaSeconds();
 
-    StatsComponent->RestoreStamina(RestoreStaminaRate * DeltaTime); 
+    Techdarkness_DevHealthStaminaComponent->RestoreStamina(RestoreStaminaRate * DeltaTime); 
 }

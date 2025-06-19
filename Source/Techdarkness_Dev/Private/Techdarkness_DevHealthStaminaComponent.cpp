@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "StatsComponent.h"
+#include "Techdarkness_DevHealthStaminaComponent.h"
 
 // Sets default values for this component's properties
-UStatsComponent::UStatsComponent()
+UTechdarkness_DevHealthStaminaComponent::UTechdarkness_DevHealthStaminaComponent()
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
@@ -15,7 +15,7 @@ UStatsComponent::UStatsComponent()
 
 
 // Called when the game starts
-void UStatsComponent::BeginPlay()
+void UTechdarkness_DevHealthStaminaComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -25,14 +25,14 @@ void UStatsComponent::BeginPlay()
 
 
 // Called every frame
-void UStatsComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+void UTechdarkness_DevHealthStaminaComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 	// ...
 }
 
-void UStatsComponent::TakeDamage(float DamageAmount)
+void UTechdarkness_DevHealthStaminaComponent::TakeDamage(float DamageAmount)
 {
     if (CurrentHealth <= 0.f || DamageAmount <= 0.f)
         return;
@@ -46,7 +46,7 @@ void UStatsComponent::TakeDamage(float DamageAmount)
     }
 }
 
-void UStatsComponent::Heal(float HealAmount)
+void UTechdarkness_DevHealthStaminaComponent::Heal(float HealAmount)
 {
     if (CurrentHealth >= MaxHealth || HealAmount <= 0.f)
 	{
@@ -55,7 +55,7 @@ void UStatsComponent::Heal(float HealAmount)
     CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
 }
 
-void UStatsComponent::DrainStamina(float StaminaAmount)
+void UTechdarkness_DevHealthStaminaComponent::DrainStamina(float StaminaAmount)
 {
 	if (CurrentStamina <= 0.f || StaminaAmount <= 0.f)
 	{
@@ -65,7 +65,7 @@ void UStatsComponent::DrainStamina(float StaminaAmount)
 	CurrentStamina = FMath::Clamp(CurrentStamina - StaminaAmount, 0.f, MaxStamina);
 }
 
-void UStatsComponent::RestoreStamina(float StaminaAmount)
+void UTechdarkness_DevHealthStaminaComponent::RestoreStamina(float StaminaAmount)
 {
 	if (CurrentStamina >= MaxStamina)
 	{

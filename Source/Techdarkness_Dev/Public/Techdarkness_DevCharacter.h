@@ -8,7 +8,7 @@ class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 class ALadder;
-class UStatsComponent;
+class UTechdarkness_DevHealthStaminaComponent;
 /**
  * Класс персонажа для проекта Techdarkness.
  * Реализует управление, лазание по лестнице и скольжение (slide).
@@ -128,7 +128,7 @@ public:
 protected:
     /** Компонент для управления статов персонажа */
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Stats", meta=(AllowPrivateAccess="true"))
-    UStatsComponent* StatsComponent;
+    UTechdarkness_DevHealthStaminaComponent* Techdarkness_DevHealthStaminaComponent;
 
    //-----Спринт-----
 protected:

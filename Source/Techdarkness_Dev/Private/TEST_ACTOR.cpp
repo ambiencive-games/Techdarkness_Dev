@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "TEST_ACTOR.h"
-#include "StatsComponent.h"
+#include "Techdarkness_DevHealthStaminaComponent.h"
 #include "Techdarkness_DevCharacter.h"
 
 // Sets default values
@@ -29,15 +29,15 @@ void ATEST_ACTOR::OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor)
 
 	if (ATechdarkness_DevCharacter* PlayerCharacter = Cast<ATechdarkness_DevCharacter>(OtherActor))
 	{
-		if (UStatsComponent* StatsComponent = PlayerCharacter->FindComponentByClass<UStatsComponent>())
+		if (UTechdarkness_DevHealthStaminaComponent* Techdarkness_DevHealthStaminaComponent = PlayerCharacter->FindComponentByClass<UTechdarkness_DevHealthStaminaComponent>())
 		{
-			StatsComponent->TakeDamage(DamageAmount);
+			Techdarkness_DevHealthStaminaComponent->TakeDamage(DamageAmount);
 			UE_LOG(LogTemp, Warning, TEXT("Player took damage: %f"), DamageAmount);
-			UE_LOG(LogTemp, Warning, TEXT("Player's current health: %f"), StatsComponent->GetHealth());
+			UE_LOG(LogTemp, Warning, TEXT("Player's current health: %f"), Techdarkness_DevHealthStaminaComponent->GetHealth());
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("StatsComponent not found!"));
+			UE_LOG(LogTemp, Warning, TEXT("Techdarkness_DevHealthStaminaComponent not found!"));
 		}
 	}
 }
