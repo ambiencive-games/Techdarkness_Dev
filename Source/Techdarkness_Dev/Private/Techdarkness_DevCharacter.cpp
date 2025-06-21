@@ -36,12 +36,7 @@ ATechdarkness_DevCharacter::ATechdarkness_DevCharacter()
     // Отключаем тик, не требуется
     PrimaryActorTick.bCanEverTick = false;
 
-    Techdarkness_DevHealthStaminaComponent = CreateDefaultSubobject<UTechdarkness_DevHealthStaminaComponent>(TEXT("Techdarkness_DevHealthStaminaComponent"));
-    Techdarkness_DevHealthStaminaComponent->GetHealth();
-    Techdarkness_DevHealthStaminaComponent->MaxHealth = 100.0f; 
-    Techdarkness_DevHealthStaminaComponent->CurrentHealth = Techdarkness_DevHealthStaminaComponent->MaxHealth;
-    Techdarkness_DevHealthStaminaComponent->MaxStamina = 100.0f;
-    Techdarkness_DevHealthStaminaComponent->CurrentStamina = Techdarkness_DevHealthStaminaComponent->MaxStamina;
+    HealthStaminaComponent = CreateDefaultSubobject<UTechdarkness_DevHealthStaminaComponent>(TEXT("HealthStaminaComponent"));
 }
 
 void ATechdarkness_DevCharacter::BeginPlay()
@@ -207,25 +202,33 @@ void ATechdarkness_DevCharacter::Look(const FInputActionValue& Value)
 
 void ATechdarkness_DevCharacter::TryClimb()
 {
-    // Проверяем, можно ли начать лазить
     if (bCanClimbLadder && !bIsClimbing && CurrentLadder)
     {
         FVector Start = CurrentLadder->GetLadderBottomPoint();
-        FVector End = CurrentLadder->GetLadderTopPoint();
+        FVector End   = CurrentLadder->GetLadderTopPoint();
         FVector LadderDir = (End - Start).GetSafeNormal();
         float Length = FVector::Dist(Start, End);
+
         // Находим ближайшую точку на лестнице
         float T = FVector::DotProduct(GetActorLocation() - Start, LadderDir);
         T = FMath::Clamp(T, 0.f, Length);
         FVector ClosestPoint = Start + LadderDir * T;
         FVector LadderForward = CurrentLadder->GetActorForwardVector();
         float Offset = GetCapsuleComponent()->GetUnscaledCapsuleRadius() + 1.f;
-        // Ставим персонажа впритык к лестнице
+
+        // Разворачиваем контроллер (ВАЖНО для first person!)
+        FRotator FaceLadderRotation = LadderForward.Rotation();
+        float LadderYaw = FaceLadderRotation.Yaw + 180.0f;       // Поворот на 180 градусов
+        FRotator FaceLadderYaw(0.f, LadderYaw, 0.f);
+        SetActorRotation(FaceLadderYaw);
+        if (Controller)
+        {
+            Controller->SetControlRotation(FaceLadderYaw);
+        }
+
         FVector PlaceInFront = ClosestPoint + LadderForward * Offset;
         SetActorLocation(PlaceInFront, true);
-        FRotator FaceLadderRotation = LadderForward.Rotation();
-        SetActorRotation(FRotator(0.f, FaceLadderRotation.Yaw, 0.f));
-        // Активируем лазание — режим Flying и отключаем гравитацию
+
         bIsClimbing = true;
         GetCharacterMovement()->SetMovementMode(MOVE_Flying);
         GetCharacterMovement()->GravityScale = 0.0f;
@@ -322,8 +325,8 @@ void ATechdarkness_DevCharacter::OnMovementModeChanged(EMovementMode PrevMode, u
 void ATechdarkness_DevCharacter::SprintStart()
 {
     if (CurrentActionState == EActionState::EAS_Unoccupied && 
-        Techdarkness_DevHealthStaminaComponent && 
-        Techdarkness_DevHealthStaminaComponent->GetStamina() > 0.f)
+        HealthStaminaComponent && 
+        HealthStaminaComponent->GetStamina() > 0.f)
     {
         CurrentActionState = EActionState::EAS_Sprinting;
         GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &ATechdarkness_DevCharacter::SprintLoop, 0.01f, true);
@@ -344,18 +347,18 @@ void ATechdarkness_DevCharacter::SprintEnds()
 
 void ATechdarkness_DevCharacter::SprintLoop()
 {
-    if (!Techdarkness_DevHealthStaminaComponent) return;
+    if (!HealthStaminaComponent) return;
 
     const float DeltaTime = GetWorld()->GetDeltaSeconds();
 
-    if (Techdarkness_DevHealthStaminaComponent->GetStamina() <= 0.f)
+    if (HealthStaminaComponent->GetStamina() <= 0.f)
     {
-        Techdarkness_DevHealthStaminaComponent->CurrentStamina = 0.f;
+        HealthStaminaComponent->CurrentStamina = 0.f;
         SprintEnds();
         return;
     }
 
-    Techdarkness_DevHealthStaminaComponent->DrainStamina(StaminaDrainPerSecond * DeltaTime);
+    HealthStaminaComponent->DrainStamina(StaminaDrainPerSecond * DeltaTime);
 
     // Интерполяция скорости
     float CurrentSpeed = GetCharacterMovement()->MaxWalkSpeed;
@@ -366,7 +369,7 @@ void ATechdarkness_DevCharacter::SprintLoop()
 // ----- Функции для стамины -----
 void ATechdarkness_DevCharacter::RestoreStaminaStart()
 {
-    if (!Techdarkness_DevHealthStaminaComponent || Techdarkness_DevHealthStaminaComponent->IsStaminaFull() || EActionState::EAS_Sprinting == CurrentActionState)
+    if (!HealthStaminaComponent || HealthStaminaComponent->IsStaminaFull() || EActionState::EAS_Sprinting == CurrentActionState)
     {
         return;
     }
@@ -382,7 +385,7 @@ void ATechdarkness_DevCharacter::RestoreStaminaEnd()
 
 void ATechdarkness_DevCharacter::RestoreStaminaLoop()
 {
-    if (!Techdarkness_DevHealthStaminaComponent || Techdarkness_DevHealthStaminaComponent->IsStaminaFull())
+    if (!HealthStaminaComponent || HealthStaminaComponent->IsStaminaFull())
     {
         RestoreStaminaEnd();
         return;
@@ -390,5 +393,5 @@ void ATechdarkness_DevCharacter::RestoreStaminaLoop()
 
     const float DeltaTime = GetWorld()->GetDeltaSeconds();
 
-    Techdarkness_DevHealthStaminaComponent->RestoreStamina(RestoreStaminaRate * DeltaTime); 
+    HealthStaminaComponent->RestoreStamina(RestoreStaminaRate * DeltaTime); 
 }

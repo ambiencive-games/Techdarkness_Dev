@@ -1,19 +1,19 @@
-// Techdarkness_DevCharacter.h
 #pragma once
+
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "Techdarkness_DevCharacter.generated.h"
+
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
 class ALadder;
 class UTechdarkness_DevHealthStaminaComponent;
-/**
- * Класс персонажа для проекта Techdarkness.
- * Реализует управление, лазание по лестнице и скольжение (slide).
- */
 
+/**
+ * Перечисление состояний действия персонажа.
+ */
 UENUM(BlueprintType)
 enum class EActionState : uint8
 {
@@ -21,153 +21,209 @@ enum class EActionState : uint8
     EAS_Sprinting       UMETA(DisplayName = "Sprinting")
 };
 
+/**
+ * Главный игровой персонаж.
+ */
 UCLASS(config=Game)
 class TECHDARKNESS_DEV_API ATechdarkness_DevCharacter : public ACharacter
 {
     GENERATED_BODY()
+
 public:
-    // Конструктор персонажа
     ATechdarkness_DevCharacter();
-    // --- Состояние ---
-    UPROPERTY()
-    EActionState CurrentActionState;
-    // --- Камера ---
-    /** Компонент камеры от первого лица */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
+
+    // --- CAMERA ---
+
+    /** Компонент камеры от первого лица. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera, meta=(ToolTip="Компонент камеры от первого лица."))
     UCameraComponent* FirstPersonCameraComponent;
-    // --- Input Mapping ---
-    /** Контекст для настроек управления */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
+
+    // --- STATS COMPONENT ---
+
+    /** Компонент управления здоровьем и стаминой. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Stats", meta=(AllowPrivateAccess="true", ToolTip="Компонент управления здоровьем и стаминой персонажа."))
+    UTechdarkness_DevHealthStaminaComponent* HealthStaminaComponent;
+
+    // --- INPUT ---
+
+    /** Контекст привязки управления. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input, meta=(ToolTip="Контекст привязки управления."))
     UInputMappingContext* DefaultMappingContext;
-    /** Экшен передвижения */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
+
+    /** Действие движения. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input, meta=(ToolTip="Input Action для движения."))
     UInputAction* MoveAction;
-    /** Экшен обзора */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
+
+    /** Действие поворота камеры. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input, meta=(ToolTip="Input Action для обзора/поворота камеры."))
     UInputAction* LookAction;
-    /** Экшен попытки залезть по лестнице */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
+
+    /** Действие для лазающей лестницы. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input, meta=(ToolTip="Действие для начала лазания по лестнице."))
     UInputAction* ClimbAction;
-    /** Экшен скольжения */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
+
+    /** Действие для скольжения. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input, meta=(ToolTip="Действие для начала скольжения."))
     UInputAction* SlideAction;
-    /** Экшен спринта */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input)
+
+    /** Действие для бега. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Input, meta=(ToolTip="Действие для начала спринта."))
     UInputAction* SprintAction;
-    // --- Значение Pitch камеры, для анимаций ---
-    UPROPERTY(BlueprintReadOnly, Category="Anim")
+
+    /** Pitch камеры. */
+    UPROPERTY(BlueprintReadOnly, Category="Anim", meta=(ToolTip="Pitch (наклон) камеры для анимации."))
     float LookPitch = 0.f;
-    // --- Переопределённые функции ---
-    /** Вызывается при начале игры */
-    virtual void BeginPlay() override;
-    /** Сопряжение input'ов с функциями */
-    virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
-    /** Логика движения (ходьба/лазание) */
-    void Move(const FInputActionValue& Value);
-    /** Логика обзора */
-    void Look(const FInputActionValue& Value);
-    /** Попытка начать лазание */
-    void TryClimb();
-    /** Прекратить лазание */
-    void StopClimb();
-    /** Прекратить лазание и телепортироваться */
-    void StopClimbAndTeleport(const FVector& NewLocation);
-    /** Сброс скорости при отпускании клавиши хождения, если персонаж лазит */
-    void OnMoveActionReleased();
-    // --- Slide System (Скольжение) ---
-    /** Макс. длительность скольжения */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide")
-    float MaxSlideTime = 1.1f;
-    /** КД на повторное скольжение */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide")
-    float SlideCooldown = 0.3f;
-    /** Импульс при начале скольжения */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide")
-    float SlideImpulse = 1700.f;
-    /** Фрикция во время скольжения */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide")
-    float SlideFriction = 0.12f;
-    /** Высота капсулы при скольжении */
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide")
-    float SlideCapsuleHalfHeight = 48.f;
-    /** Обычная высота капсулы */
-    UPROPERTY(EditDefaultsOnly, Category="Slide")
-    float DefaultCapsuleHalfHeight = 96.f;
-    /** Обычная фрикция на земле */
-    UPROPERTY(EditDefaultsOnly, Category="Slide")
-    float DefaultGroundFriction = 8.f;
-    /** Обычный коэффициент торможения */
-    UPROPERTY(EditDefaultsOnly, Category="Slide")
-    float DefaultBrakingFriction = 2.f;
-    /** Флаг: персонаж скользит */
-    bool bIsSliding = false;
-    /** Последнее время окончания скольжения */
-    float LastSlideEndTime = -100.f;
-    /** Таймер для скольжения */
-    FTimerHandle SlideTimerHandle;
-    /** Начать скольжение */
-    void StartSlide();
-    /** Прервать скольжение */
-    void StopSlide();
-    /** Выйти из скольжения по отпущенной кнопке */
-    void OnSlideReleased();
-    /** Обработка смены режима движения */
-    virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
-    // --- Ladder System (Лестницы) ---
-    /** Флаг: в состоянии лазания */
-    bool bIsClimbing = false;
-    /** Указатель на текущую лестницу */
-    UPROPERTY()
+
+    // --- LADDER ---
+
+    /** Активная лестница для взаимодействия. */
+    UPROPERTY(meta=(ToolTip="Указатель на текущую лестницу, с которой взаимодействует персонаж."))
     ALadder* CurrentLadder = nullptr;
-    /** Можно ли начать лазать по нынешней лестнице */
+
+    /** Флаг: персонаж лезет по лестнице. */
+    bool bIsClimbing = false;
+
+    /** Флаг: персонаж может залезть на лестницу. */
     bool bCanClimbLadder = false;
-    /** Последнее вертикальное значение input'а */
+
+    /** Последнее вертикальное направление движения (лестница). */
     float LastVerticalInput = 0.f;
 
-    //-----Компонент статов-----
-protected:
-    /** Компонент для управления статов персонажа */
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Stats", meta=(AllowPrivateAccess="true"))
-    UTechdarkness_DevHealthStaminaComponent* Techdarkness_DevHealthStaminaComponent;
+    // --- SLIDE ---
 
-   //-----Спринт-----
-protected:
-    UFUNCTION(BlueprintCallable, Category="Sprint")
+    /** Максимальное время скольжения. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide", meta=(ToolTip="Максимальная длительность скольжения."))
+    float MaxSlideTime = 1.1f;
+
+    /** Время перезарядки скольжения. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide", meta=(ToolTip="Время перезарядки скольжения."))
+    float SlideCooldown = 0.3f;
+
+    /** Импульс, с которым начинается скольжение. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide", meta=(ToolTip="Сила импульса при начале скольжения."))
+    float SlideImpulse = 1700.f;
+
+    /** Сопротивление (трение) при скольжении. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide", meta=(ToolTip="Сопротивление при скольжении (friction)."))
+    float SlideFriction = 0.12f;
+
+    /** Высота капсулы во время скольжения. */
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Slide", meta=(ToolTip="Высота капсулы персонажа во время скольжения."))
+    float SlideCapsuleHalfHeight = 48.f;
+
+    /** Обычная высота капсулы персонажа. */
+    float DefaultCapsuleHalfHeight = 96.f;
+
+    /** Обычное трение земли. */
+    float DefaultGroundFriction = 8.f;
+
+    /** Обычное тормозное трение. */
+    float DefaultBrakingFriction = 2.f;
+
+    /** Флаг: персонаж находится в состоянии скольжения. */
+    bool bIsSliding = false;
+
+    /** Время окончания последнего скольжения. */
+    float LastSlideEndTime = -100.f;
+
+    /** Таймер скольжения. */
+    FTimerHandle SlideTimerHandle;
+
+    // --- SPRINT ---
+
+    /** Запустить спринт персонажа. */
+    UFUNCTION(BlueprintCallable, Category="Sprint", meta=(ToolTip="Запустить спринт персонажа (увеличение скорости и дренаж стамины)."))
     void SprintStart();
 
-    UFUNCTION(BlueprintCallable, Category="Sprint")
+    /** Остановить спринт персонажа. */
+    UFUNCTION(BlueprintCallable, Category="Sprint", meta=(ToolTip="Закончить спринт персонажа."))
     void SprintEnds();
 
-    UFUNCTION(BlueprintCallable, Category="Sprint")
+    /** Функция обновления спринта (в цикле). */
+    UFUNCTION(BlueprintCallable, Category="Sprint", meta=(ToolTip="Обновлять параметры во время спринта (дренаж стамины и скорость)."))
     void SprintLoop();
 
-    UPROPERTY(BlueprintReadWrite, Category="Sprint")
+    /** Скорость спринта персонажа. */
+    UPROPERTY(BlueprintReadWrite, Category="Sprint", meta=(ToolTip="Скорость персонажа во время спринта."))
     float SprintSpeed = 1200.f;
 
-    UPROPERTY(BlueprintReadWrite, Category="Sprint")
+    /** Скорость интерполяции ускорения при спринте. */
+    UPROPERTY(BlueprintReadWrite, Category="Sprint", meta=(ToolTip="Скорость интерполяции ускорения для плавного старта спринта."))
     float AccelerationInterpSpeed = 8.f;
 
-    UPROPERTY(BlueprintReadWrite, Category="Sprint")
+    /** Расход стамины в секунду во время спринта. */
+    UPROPERTY(BlueprintReadWrite, Category="Sprint", meta=(ToolTip="Расход стамины во время спринта (в секунду)."))
     float StaminaDrainPerSecond = 15.f;
 
+    /** Таймер спринта. */
     FTimerHandle SprintTimerHandle;
 
-    UPROPERTY(EditDefaultsOnly, Category="Sprint")
-    float BaseSpeed;
+    /** Базовая скорость персонажа (до изменений). */
+    float BaseSpeed = 0.f;
 
-    // ---- Система стамины ----
-protected:
-    UFUNCTION(BlueprintCallable, Category="Stats")
+    // --- STAMINA ---
+
+    /** Циклическое восстановление стамины start. */
+    UFUNCTION(BlueprintCallable, Category="Stats", meta=(ToolTip="Начать циклическое восстановление стамины."))
     void RestoreStaminaLoop();
 
-    UFUNCTION(BlueprintCallable, Category="Stats")
+    /** Начать восстановление стамины. */
+    UFUNCTION(BlueprintCallable, Category="Stats", meta=(ToolTip="Начать восстановление стамины для персонажа."))
     void RestoreStaminaStart();
 
-    UFUNCTION(BlueprintCallable, Category="Stats")
+    /** Завершить восстановление стамины. */
+    UFUNCTION(BlueprintCallable, Category="Stats", meta=(ToolTip="Завершить процесс восстановления стамины."))
     void RestoreStaminaEnd();
 
-    UPROPERTY(EditDefaultsOnly, Category="Stats")
+    /** Скорость восстановления стамины. */
+    UPROPERTY(EditDefaultsOnly, Category="Stats", meta=(ToolTip="Скорость восстановления стамины (единиц в секунду)."))
     float RestoreStaminaRate = 500.f; 
 
+    /** Таймер восстановления стамины. */
     FTimerHandle StaminaRegenTimerHandle;
+
+    // --- STATE ---
+
+    /** Текущее состояние действия персонажа. */
+    UPROPERTY(meta=(ToolTip="Текущее состояние действия персонажа (например, спринт, бездействие)."))
+    EActionState CurrentActionState = EActionState::EAS_Unoccupied;
+
+    // --- LADDER CLIMB ---
+
+    /** Попытаться начать лазанье по лестнице. */
+    void TryClimb();
+
+    /** Остановить лазанье по лестнице. */
+    void StopClimb();
+
+    /** Остановить лазанье по лестнице и телепортировать персонажа. */
+    void StopClimbAndTeleport(const FVector& NewLocation);
+
+protected:
+    virtual void BeginPlay() override;
+    virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
+    virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
+
+    // --- MOVEMENT ---
+
+    /** Перемещение персонажа. */
+    void Move(const FInputActionValue& Value);
+
+    /** Вращение камеры (обзор). */
+    void Look(const FInputActionValue& Value);
+
+    /** Обработчик отпускания кнопки движения. */
+    void OnMoveActionReleased();
+
+    // --- SLIDE ---
+
+    /** Начать скольжение. */
+    void StartSlide();
+
+    /** Остановить скольжение. */
+    void StopSlide();
+
+    /** Обработчик отпускания кнопки скольжения. */
+    void OnSlideReleased();
+
 };

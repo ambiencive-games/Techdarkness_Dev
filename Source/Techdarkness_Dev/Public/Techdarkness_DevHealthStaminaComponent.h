@@ -1,65 +1,76 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Techdarkness_DevHealthStaminaComponent.generated.h"
 
+// Делегат, вызываемый при смерти персонажа.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+/**
+ * Компонент управления здоровьем и стаминой персонажа.
+ */
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class TECHDARKNESS_DEV_API UTechdarkness_DevHealthStaminaComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-public:	
-	// Sets default values for this component's properties
-	UTechdarkness_DevHealthStaminaComponent();
+public:
+    UTechdarkness_DevHealthStaminaComponent();
 
 protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-	// --- Система здоровья ---
 public:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Health")
+    // --- Здоровье ---
+
+    /** Максимальное здоровье персонажа. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Health", meta=(ToolTip="Максимальное здоровье персонажа."))
     float MaxHealth = 100.0f;
 
-    float CurrentHealth;
+    /** Текущее здоровье персонажа. */
+    UPROPERTY(BlueprintReadOnly, Category="Health", meta=(ToolTip="Текущее здоровье персонажа."))
+    float CurrentHealth = 0.0f;
 
-    UFUNCTION(BlueprintCallable, Category="Health")
+    /** Наносит урон персонажу. */
+    UFUNCTION(BlueprintCallable, Category="Health", meta=(ToolTip="Наносит урон персонажу на заданное значение."))
     void TakeDamage(float DamageAmount);
 
-    UFUNCTION(BlueprintCallable, Category="Health")
+    /** Лечит персонажа на указанное значение. */
+    UFUNCTION(BlueprintCallable, Category="Health", meta=(ToolTip="Лечит персонажа на заданное количество здоровья."))
     void Heal(float HealAmount);
 
-    UFUNCTION(BlueprintCallable, Category="Health")
+    /** Возвращает текущее здоровье персонажа. */
+    UFUNCTION(BlueprintCallable, Category="Health", meta=(ToolTip="Возвращает текущее здоровье персонажа."))
     float GetHealth() const { return CurrentHealth; }
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeath);
-    UPROPERTY(BlueprintAssignable, Category="Health")
-    FOnDeath OnDeath; // Функция, вызываемая при смерти или разрушении чего-то
+    /** Делегат, вызываемый при смерти персонажа. */
+    UPROPERTY(BlueprintAssignable, Category="Health", meta=(ToolTip="Делегат, вызываемый при смерти персонажа."))
+    FOnDeath OnDeath;
 
-    // --- Система выносливости ---
-public:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Stamina")
+    // --- Стамина ---
+
+    /** Максимальная стамина персонажа. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Stamina", meta=(ToolTip="Максимальный запас стамины персонажа."))
     float MaxStamina = 100.0f;
 
-    float CurrentStamina;
+    /** Текущий запас стамины. */
+    UPROPERTY(BlueprintReadOnly, Category="Stamina", meta=(ToolTip="Текущее количество стамины у персонажа."))
+    float CurrentStamina = 0.0f;
 
-    UFUNCTION(BlueprintCallable, Category="Stamina")
+    /** Снижает запас стамины на указанную величину. */
+    UFUNCTION(BlueprintCallable, Category="Stamina", meta=(ToolTip="Снижает запас стамины на указанное значение."))
     void DrainStamina(float StaminaAmount);
 
-    UFUNCTION(BlueprintCallable, Category="Stamina")
+    /** Восстанавливает запас стамины на указанную величину. */
+    UFUNCTION(BlueprintCallable, Category="Stamina", meta=(ToolTip="Восстанавливает запас стамины на указанное значение."))
     void RestoreStamina(float StaminaAmount);
 
-    UFUNCTION(BlueprintCallable, Category="Health")
+    /** Возвращает текущий запас стамины. */
+    UFUNCTION(BlueprintCallable, Category="Stamina", meta=(ToolTip="Возвращает текущее значение стамины."))
     float GetStamina() const { return CurrentStamina; }
 
-    UFUNCTION(BlueprintCallable, Category="Stamina")
+    /** Возвращает true, если стамина полная. */
+    UFUNCTION(BlueprintCallable, Category="Stamina", meta=(ToolTip="Проверяет, заполнена ли стамина полностью."))
     bool IsStaminaFull() const { return CurrentStamina >= MaxStamina; }
 };
