@@ -1,55 +1,48 @@
-// Techdarkness_DevCharacter.cpp
 #include "Techdarkness_DevCharacter.h"
+#include "Techdarkness_DevHealthStaminaComponent.h"
+#include "Techdarkness_RealCMC.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "GameFramework/PlayerController.h"
 #include "Ladder.h"
-#include "DrawDebugHelpers.h"
-#include "Techdarkness_DevHealthStaminaComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "TimerManager.h"
+#include "DrawDebugHelpers.h"
 
-ATechdarkness_DevCharacter::ATechdarkness_DevCharacter()
+ATechdarkness_DevCharacter::ATechdarkness_DevCharacter(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer.SetDefaultSubobjectClass<UTechdarkness_RealCMC>(ACharacter::CharacterMovementComponentName))
 {
-    // Инициализация капсулы персонажа
-    GetCapsuleComponent()->InitCapsuleSize(35.f, DefaultCapsuleHalfHeight);
-    // Настройка меша
-    GetMesh()->SetupAttachment(GetCapsuleComponent());
-    GetMesh()->SetRelativeLocation(FVector(0.f, 0.f, -DefaultCapsuleHalfHeight));
-    GetMesh()->SetOwnerNoSee(false);
-    GetMesh()->SetOnlyOwnerSee(false);
-    GetMesh()->CastShadow = true;
-    GetMesh()->bCastDynamicShadow = true;
-    GetMesh()->bCastHiddenShadow = true;
-    GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    // Создание камеры первого лица
+    // Коллизия капсулы
+    GetCapsuleComponent()->InitCapsuleSize(35.f, 96.f);
+
+    // Камера первого лица
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
     FirstPersonCameraComponent->SetupAttachment(GetMesh(), TEXT("CameraSocket"));
     FirstPersonCameraComponent->bUsePawnControlRotation = true;
-    // Инициализация флагов и указателей для лестницы
+
+    // Компонент здоровья/стамины
+    HealthStaminaComponent = CreateDefaultSubobject<UTechdarkness_DevHealthStaminaComponent>(TEXT("HealthStaminaComponent"));
+
+    // Переменные по умолчанию
     bIsClimbing = false;
     bCanClimbLadder = false;
     CurrentLadder = nullptr;
     LastVerticalInput = 0.f;
-    // Отключаем тик, не требуется
-    PrimaryActorTick.bCanEverTick = false;
-
-    HealthStaminaComponent = CreateDefaultSubobject<UTechdarkness_DevHealthStaminaComponent>(TEXT("HealthStaminaComponent"));
+    LookPitch = 0.f;
+    BaseSpeed = 500.f; // default
+    CurrentActionState = EActionState::EAS_Unoccupied;
 }
 
 void ATechdarkness_DevCharacter::BeginPlay()
 {
     Super::BeginPlay();
-    // Сохраняем стандартные параметры коллизии и трения
-    DefaultCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-    DefaultGroundFriction = GetCharacterMovement()->GroundFriction;
-    DefaultBrakingFriction = GetCharacterMovement()->BrakingFrictionFactor;
 
+    // Сохраняем стартовые скорости
     BaseSpeed = GetCharacterMovement()->MaxWalkSpeed;
 
-    // Добавляем контекст управления (input mapping)
+    // Input mapping (для EnhancedInputSubsystems)
     if (APlayerController* PC = Cast<APlayerController>(Controller))
     {
         if (ULocalPlayer* LocalPlayer = PC->GetLocalPlayer())
@@ -68,41 +61,41 @@ void ATechdarkness_DevCharacter::BeginPlay()
 void ATechdarkness_DevCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     check(PlayerInputComponent);
+
     if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
     {
-        // Биндим движения
+        // Движение
         if (MoveAction)
         {
             EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ATechdarkness_DevCharacter::Move);
             EnhancedInput->BindAction(MoveAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::OnMoveActionReleased);
         }
-        // Биндим камеру
+
+        // Камера
         if (LookAction)
+        {
             EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATechdarkness_DevCharacter::Look);
-        // Биндим полезание по лестнице
+        }
+
+        // Лестница
         if (ClimbAction)
+        {
             EnhancedInput->BindAction(ClimbAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::TryClimb);
-        // Биндим скольжение (slide)
+        }
+
+        // --- Скользжение (Slide) ---
         if (SlideAction)
         {
-            EnhancedInput->BindAction(SlideAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::StartSlide);
+            EnhancedInput->BindAction(SlideAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::OnSlideStarted);
             EnhancedInput->BindAction(SlideAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::OnSlideReleased);
         }
-        if(SprintAction)
-        {
-            EnhancedInput->BindAction(SprintAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::SprintStart);
-            EnhancedInput->BindAction(SprintAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::SprintEnds);
-        }
-    }
-}
 
-void ATechdarkness_DevCharacter::OnMoveActionReleased()
-{
-    // Если персонаж лазает по лестнице и отпускает движение, он останавливается
-    if (bIsClimbing && GetCharacterMovement())
-    {
-        GetCharacterMovement()->Velocity = FVector::ZeroVector;
-        LastVerticalInput = 0.f;
+        // --- Спринт (Sprint) ---
+        if (SprintAction)
+        {
+            EnhancedInput->BindAction(SprintAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::OnSprintStarted);
+            EnhancedInput->BindAction(SprintAction, ETriggerEvent::Completed, this, &ATechdarkness_DevCharacter::OnSprintReleased);
+        }
     }
 }
 
@@ -111,24 +104,29 @@ void ATechdarkness_DevCharacter::Move(const FInputActionValue& Value)
     FVector2D MovementVector = Value.Get<FVector2D>();
     if (!Controller)
         return;
+
     float VerticalInput = MovementVector.Y;
     LastVerticalInput = VerticalInput;
+
+    // Лазание по лестнице
     if (bIsClimbing && CurrentLadder)
     {
-        // --- Логика лазания по лестнице ---
         FVector LadderDir = (CurrentLadder->GetLadderTopPoint() - CurrentLadder->GetLadderBottomPoint()).GetSafeNormal();
         FVector Start = CurrentLadder->GetLadderBottomPoint();
         FVector End = CurrentLadder->GetLadderTopPoint();
         FVector Current = GetActorLocation();
+
         float T = FVector::DotProduct(Current - Start, LadderDir);
         float Length = FVector::Dist(Start, End);
         float ExitThreshold = 20.f;
         float ClimbSpeed = 150.f;
         float Delta = GetWorld()->GetDeltaSeconds();
         float Offset = GetCapsuleComponent()->GetUnscaledCapsuleRadius() + 1.f;
+
         FVector LadderForward = CurrentLadder->GetActorForwardVector();
         float NextT = T + VerticalInput * ClimbSpeed * Delta;
-        // Проверка выхода вниз с лестницы
+
+        // Сход вниз
         if (NextT < 0.f)
         {
             StopClimb();
@@ -138,11 +136,10 @@ void ATechdarkness_DevCharacter::Move(const FInputActionValue& Value)
             CurrentLadder = nullptr;
             return;
         }
-        // Проверка выхода наверх
+        // Сход вверх
         if (NextT > Length - ExitThreshold)
         {
             StopClimb();
-            // Проверяем, есть ли платформа наверху
             FVector CapsuleTop = End + LadderForward * (Offset + 20.f) + FVector(0,0,50.f);
             FVector TraceStart = CapsuleTop;
             FVector TraceEnd = CapsuleTop - FVector(0,0,120.f);
@@ -152,7 +149,6 @@ void ATechdarkness_DevCharacter::Move(const FInputActionValue& Value)
             bool bFoundPlatform = GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, Params);
             if (bFoundPlatform)
             {
-                // Ставим персонажа на найденную платформу
                 FVector PlaceOnTop = HitResult.ImpactPoint 
                     + LadderForward * (Offset + 5.f)
                     + FVector(0, 0, GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight() + 2.f);
@@ -160,7 +156,6 @@ void ATechdarkness_DevCharacter::Move(const FInputActionValue& Value)
             }
             else
             {
-                // Нет платформы — ставим чуть выше лестницы
                 FVector ExitPoint = End + LadderForward * (Offset + 20.f) + FVector(0,0,60.f);
                 SetActorLocation(ExitPoint, true);
             }
@@ -170,15 +165,12 @@ void ATechdarkness_DevCharacter::Move(const FInputActionValue& Value)
         }
         // Движение по лестнице
         GetCharacterMovement()->Velocity = LadderDir * VerticalInput * ClimbSpeed;
-        // Если нет вертикального input'а — персонаж замирает
         if (FMath::Abs(VerticalInput) < 0.1f)
-        {
             GetCharacterMovement()->Velocity = FVector::ZeroVector;
-        }
     }
     else
     {
-        // --- Обычное передвижение по полу ---
+        // Обычное движение по земле
         AddMovementInput(GetActorForwardVector(), MovementVector.Y);
         AddMovementInput(GetActorRightVector(), MovementVector.X);
     }
@@ -194,9 +186,18 @@ void ATechdarkness_DevCharacter::Look(const FInputActionValue& Value)
     }
     if (FirstPersonCameraComponent)
     {
-        // Сохраняем Pitch для использования в анимациях
         float Pitch = FirstPersonCameraComponent->GetComponentRotation().Pitch;
         LookPitch = UKismetMathLibrary::NormalizeAxis(Pitch);
+    }
+}
+
+void ATechdarkness_DevCharacter::OnMoveActionReleased()
+{
+    // Остановить движение на лестнице, если нужно
+    if (bIsClimbing && GetCharacterMovement())
+    {
+        GetCharacterMovement()->Velocity = FVector::ZeroVector;
+        LastVerticalInput = 0.f;
     }
 }
 
@@ -209,22 +210,21 @@ void ATechdarkness_DevCharacter::TryClimb()
         FVector LadderDir = (End - Start).GetSafeNormal();
         float Length = FVector::Dist(Start, End);
 
-        // Находим ближайшую точку на лестнице
         float T = FVector::DotProduct(GetActorLocation() - Start, LadderDir);
         T = FMath::Clamp(T, 0.f, Length);
         FVector ClosestPoint = Start + LadderDir * T;
+
         FVector LadderForward = CurrentLadder->GetActorForwardVector();
         float Offset = GetCapsuleComponent()->GetUnscaledCapsuleRadius() + 1.f;
 
-        // Разворачиваем контроллер (ВАЖНО для first person!)
+        // Повернуть контроллер к лестнице
         FRotator FaceLadderRotation = LadderForward.Rotation();
-        float LadderYaw = FaceLadderRotation.Yaw + 180.0f;       // Поворот на 180 градусов
+        float LadderYaw = FaceLadderRotation.Yaw + 180.0f;
         FRotator FaceLadderYaw(0.f, LadderYaw, 0.f);
         SetActorRotation(FaceLadderYaw);
+
         if (Controller)
-        {
             Controller->SetControlRotation(FaceLadderYaw);
-        }
 
         FVector PlaceInFront = ClosestPoint + LadderForward * Offset;
         SetActorLocation(PlaceInFront, true);
@@ -242,156 +242,56 @@ void ATechdarkness_DevCharacter::StopClimb()
     if (bIsClimbing)
     {
         bIsClimbing = false;
-        // Возвращаем обычный режим ходьбы и гравитацию
         GetCharacterMovement()->SetMovementMode(MOVE_Walking);
         GetCharacterMovement()->GravityScale = 1.0f;
         GetCharacterMovement()->Velocity = FVector::ZeroVector;
         LastVerticalInput = 0.f;
     }
 }
+
 void ATechdarkness_DevCharacter::StopClimbAndTeleport(const FVector& NewLocation)
 {
     StopClimb();
     SetActorLocation(NewLocation, true);
 }
 
-void ATechdarkness_DevCharacter::StartSlide()
-{
-    // Если уже скользим или в воздухе/слишком рано — не даём начать slide
-    if (bIsSliding)
-        return;
-    if (GetCharacterMovement()->IsFalling())
-        return;
-    float Now = GetWorld()->GetTimeSeconds();
-    if (Now - LastSlideEndTime < SlideCooldown)
-        return;
-    // Вычисляем направление slide — по input или по forward
-    FVector InputDir;
-    if (Controller)
-    {
-        const FRotator YawRot(0, Controller->GetControlRotation().Yaw, 0);
-        InputDir = UKismetMathLibrary::GetForwardVector(YawRot) * LastVerticalInput;
-        if (InputDir.IsNearlyZero())
-            InputDir = GetActorForwardVector();
-    }
-    else
-    {
-        InputDir = GetActorForwardVector();
-    }
-    bIsSliding = true;
-    // Сохраняем обычные значения на случай если были изменены
-    DefaultCapsuleHalfHeight = GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-    DefaultGroundFriction = GetCharacterMovement()->GroundFriction;
-    DefaultBrakingFriction = GetCharacterMovement()->BrakingFrictionFactor;
-    // Задаём параметры slide
-    GetCharacterMovement()->BrakingFrictionFactor = SlideFriction;
-    GetCharacterMovement()->GroundFriction = SlideFriction;
-    GetCharacterMovement()->bWantsToCrouch = true;
-    GetCapsuleComponent()->SetCapsuleHalfHeight(SlideCapsuleHalfHeight);
-    // Задаём стартовую скорость скольжения
-    GetCharacterMovement()->Velocity = InputDir * SlideImpulse;
-    // Запускаем таймер авто-выхода из slide
-    GetWorldTimerManager().SetTimer(SlideTimerHandle, this, &ATechdarkness_DevCharacter::StopSlide, MaxSlideTime, false);
-}
-void ATechdarkness_DevCharacter::StopSlide()
-{
-    if (!bIsSliding)
-        return;
-    bIsSliding = false;
-    LastSlideEndTime = GetWorld()->GetTimeSeconds();
-    // Возвращаем обычные параметры движка и капсулы
-    GetCharacterMovement()->BrakingFrictionFactor = DefaultBrakingFriction;
-    GetCharacterMovement()->GroundFriction = DefaultGroundFriction;
-    GetCharacterMovement()->bWantsToCrouch = false;
-    GetCapsuleComponent()->SetCapsuleHalfHeight(DefaultCapsuleHalfHeight);
-    // Очищаем таймер, если активен
-    GetWorldTimerManager().ClearTimer(SlideTimerHandle);
-}
-void ATechdarkness_DevCharacter::OnSlideReleased()
-{
-    StopSlide();
-}
 void ATechdarkness_DevCharacter::OnMovementModeChanged(EMovementMode PrevMode, uint8 PreviousCustomMode)
 {
     Super::OnMovementModeChanged(PrevMode, PreviousCustomMode);
-    // Если во время скольжения персонаж начал падать — завершить slide
-    if (bIsSliding && GetCharacterMovement()->IsFalling())
-    {
-        StopSlide();
-    }
-}
-
-// ----- Функции для спринта -----
-void ATechdarkness_DevCharacter::SprintStart()
-{
-    if (CurrentActionState == EActionState::EAS_Unoccupied && 
-        HealthStaminaComponent && 
-        HealthStaminaComponent->GetStamina() > 0.f)
-    {
-        CurrentActionState = EActionState::EAS_Sprinting;
-        GetWorld()->GetTimerManager().SetTimer(SprintTimerHandle, this, &ATechdarkness_DevCharacter::SprintLoop, 0.01f, true);
-        RestoreStaminaEnd();
-    } 
-}
-
-void ATechdarkness_DevCharacter::SprintEnds()
-{
-    if (EActionState::EAS_Sprinting == CurrentActionState)
-    {
-        CurrentActionState = EActionState::EAS_Unoccupied;
-        GetWorld()->GetTimerManager().ClearTimer(SprintTimerHandle);
-        GetCharacterMovement()->MaxWalkSpeed = BaseSpeed;
-        RestoreStaminaStart();
-    }
-}
-
-void ATechdarkness_DevCharacter::SprintLoop()
-{
-    if (!HealthStaminaComponent) return;
-
-    const float DeltaTime = GetWorld()->GetDeltaSeconds();
-
-    if (HealthStaminaComponent->GetStamina() <= 0.f)
-    {
-        HealthStaminaComponent->CurrentStamina = 0.f;
-        SprintEnds();
-        return;
-    }
-
-    HealthStaminaComponent->DrainStamina(StaminaDrainPerSecond * DeltaTime);
-
-    // Интерполяция скорости
-    float CurrentSpeed = GetCharacterMovement()->MaxWalkSpeed;
-    float NewSpeed = FMath::FInterpTo(CurrentSpeed, SprintSpeed, DeltaTime, AccelerationInterpSpeed);
-    GetCharacterMovement()->MaxWalkSpeed = NewSpeed;
-}
-
-// ----- Функции для стамины -----
-void ATechdarkness_DevCharacter::RestoreStaminaStart()
-{
-    if (!HealthStaminaComponent || HealthStaminaComponent->IsStaminaFull() || EActionState::EAS_Sprinting == CurrentActionState)
-    {
-        return;
-    }
-    
-    GetWorldTimerManager().SetTimer(StaminaRegenTimerHandle, this, &ATechdarkness_DevCharacter::RestoreStaminaLoop, 0.5f, true);
+    if (bIsClimbing && GetCharacterMovement()->IsFalling())
+        StopClimb();
     
 }
-
-void ATechdarkness_DevCharacter::RestoreStaminaEnd()
+void ATechdarkness_DevCharacter::OnSlideStarted(const FInputActionInstance& Instance)
 {
-    GetWorldTimerManager().ClearTimer(StaminaRegenTimerHandle);
+    if (auto* MoveComp = Cast<UTechdarkness_RealCMC>(GetCharacterMovement()))
+    {
+        MoveComp->Input_SlidePressed();
+        UE_LOG(LogTemp, Warning, TEXT("OnSlideStarted called"));
+    }
 }
 
-void ATechdarkness_DevCharacter::RestoreStaminaLoop()
+void ATechdarkness_DevCharacter::OnSlideReleased(const FInputActionInstance& Instance)
 {
-    if (!HealthStaminaComponent || HealthStaminaComponent->IsStaminaFull())
+    if (auto* MoveComp = Cast<UTechdarkness_RealCMC>(GetCharacterMovement()))
     {
-        RestoreStaminaEnd();
-        return;
+        MoveComp->Input_SlideReleased();
     }
+}
 
-    const float DeltaTime = GetWorld()->GetDeltaSeconds();
+void ATechdarkness_DevCharacter::OnSprintStarted(const FInputActionInstance& Instance)
+{
+    if (auto* MoveComp = Cast<UTechdarkness_RealCMC>(GetCharacterMovement()))
+    {
+        MoveComp->Input_SprintPressed();
+        UE_LOG(LogTemp, Warning, TEXT("OnSprintStarted called"));
+    }
+}
 
-    HealthStaminaComponent->RestoreStamina(RestoreStaminaRate * DeltaTime); 
+void ATechdarkness_DevCharacter::OnSprintReleased(const FInputActionInstance& Instance)
+{
+    if (auto* MoveComp = Cast<UTechdarkness_RealCMC>(GetCharacterMovement()))
+    {
+        MoveComp->Input_SprintReleased();
+    }
 }

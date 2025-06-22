@@ -14,10 +14,11 @@
     <list default="true" id="03e69c51-2b36-4212-9a1e-b1450076316a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Techdarkness_Dev/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Techdarkness_Dev/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_DevCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_DevCharacter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_DevHealthStaminaComponent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_DevHealthStaminaComponent.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Ladder.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Ladder.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_RealCMC.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_RealCMC.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_RealMoveCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_RealMoveCharacter.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_DevCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_DevCharacter.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_DevHealthStaminaComponent.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_DevHealthStaminaComponent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_RealCMC.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_RealCMC.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_RealMoveCharacter.h" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Public/Techdarkness_RealMoveCharacter.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,7 +32,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="cidr-memory-view://0" root0="FORCE_HIGHLIGHTING" />
+    <setting file="cidr-memory-view://6" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../UE_5.4/Engine/Source/Runtime/Core/Public/Templates/Invoke.h" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../UE_5.4/Engine/Source/Runtime/Engine/Private/Pawn.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Intermediate/Build/Win64/UnrealEditor/Inc/Techdarkness_Dev/UHT/Ladder.gen.cpp" root0="SKIP_HIGHLIGHTING" />
@@ -524,7 +525,9 @@
       <workItem from="1750354055672" duration="412000" />
       <workItem from="1750504130322" duration="3650000" />
       <workItem from="1750511320990" duration="576000" />
-      <workItem from="1750514009966" duration="1071000" />
+      <workItem from="1750514009966" duration="6419000" />
+      <workItem from="1750576983527" duration="3912000" />
+      <workItem from="1750581137146" duration="377000" />
     </task>
     <servers />
   </component>

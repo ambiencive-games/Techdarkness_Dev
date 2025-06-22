@@ -1,228 +1,187 @@
 #include "Techdarkness_RealCMC.h"
-#include "Techdarkness_RealMoveCharacter.h"
+#include "Techdarkness_DevCharacter.h"
 #include "Components/CapsuleComponent.h"
-#include "GameFramework/Character.h"
-#include "DrawDebugHelpers.h"
+#include "GameFramework/Actor.h"
+#include "TimerManager.h"
 
-UTechdarkness_RealCMC::UTechdarkness_RealCMC() {}
+UTechdarkness_RealCMC::UTechdarkness_RealCMC()
+{
+    SlideCapsuleHalfHeight = 48.f;
+    DefaultCapsuleHalfHeight = 96.f;
+    DefaultGroundFriction = 8.f;
+    DefaultBrakingFriction = 2.f;
+    WalkSpeed = 500.f;
+}
 
 void UTechdarkness_RealCMC::InitializeComponent()
 {
-	Super::InitializeComponent();
-	RealMoveCharacterOwner = Cast<ATechdarkness_RealMoveCharacter>(GetOwner());
+    Super::InitializeComponent();
+    OwningCharacter = Cast<ATechdarkness_DevCharacter>(GetOwner());
+    if (OwningCharacter)
+        DefaultCapsuleHalfHeight = OwningCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+}
+
+void UTechdarkness_RealCMC::BeginPlay()
+{
+    Super::BeginPlay();
+    if (OwningCharacter)
+        DefaultCapsuleHalfHeight = OwningCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+    MaxWalkSpeed = WalkSpeed;
 }
 
 bool UTechdarkness_RealCMC::IsMovingOnGround() const
 {
-	return Super::IsMovingOnGround() || IsCustomMovementMode(CMOVE_Slide);
-}
-
-bool UTechdarkness_RealCMC::CanCrouchInCurrentState() const
-{
-	return Super::CanCrouchInCurrentState() && IsMovingOnGround();
+    return Super::IsMovingOnGround() || IsCustomMovementMode(CMOVE_Slide);
 }
 
 void UTechdarkness_RealCMC::OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity)
 {
-	Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
+    Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
 
-	if (MovementMode == MOVE_Walking) {
-		MaxWalkSpeed = bWantsToSprint ? Sprint_MaxWalkSpeed : Walk_MaxWalkSpeed;
-	}
+    if (MovementMode == MOVE_Walking)
+        MaxWalkSpeed = bWantsToSprint ? SprintSpeed : WalkSpeed;
+}
 
-	bPrevWantsToCrouch = bWantsToCrouch;
-	Parkour();
+void UTechdarkness_RealCMC::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+    if (IsCustomMovementMode(CMOVE_Slide) && MovementMode == MOVE_Falling)
+        StopSlide();
 }
 
 void UTechdarkness_RealCMC::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
 {
-	if (MovementMode == MOVE_Walking && bWantsToCrouch) {
-		if (bReadyForSlide) {
-			FHitResult PotentialSlideSurface;
-			if (Velocity.SizeSquared() > FMath::Square(Slide_MinSpeed) && GetSlideSurface(PotentialSlideSurface)) {
-				bReadyForSlide = false;
-				EnterSlide();
-			}
-		}
-	}
+    if (IsCustomMovementMode(CMOVE_Slide) && !bIsSliding)
+        StopSlide();
 
-	if (IsCustomMovementMode(CMOVE_Slide) && !bWantsToCrouch) {
-		ExitSlide();
-	}
-
-	if (!bReadyForSlide && !bCrouchPressed) {
-		bReadyForSlide = true;
-	}
-
-	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
+    Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
 }
 
 void UTechdarkness_RealCMC::PhysCustom(float deltaTime, int32 Iterations)
 {
-	switch (CustomMovementMode) {
-	case CMOVE_Slide:
-		PhysSlide(deltaTime, Iterations);
-		break;
-	default:
-		UE_LOG(LogTemp, Warning, TEXT("Invalid custom movement mode"));
-		break;
-	}
+    if (CustomMovementMode == CMOVE_Slide)
+        PhysSlide(deltaTime, Iterations);
+    else
+        Super::PhysCustom(deltaTime, Iterations);
 }
 
-void UTechdarkness_RealCMC::Parkour()
+// ----- API для персонажа (input) -----
+void UTechdarkness_RealCMC::Input_SlidePressed()
 {
-	FHitResult Hit;
-	FVector Start = UpdatedComponent->GetComponentLocation();
-	FVector End = Start + (CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleRadius() + 1.f) * CharacterOwner->GetActorForwardVector();
-	FName ProfileName = TEXT("BlockAll");
+    if (bReadyForSlide)
+    {
+        StartSlide();
+        bReadyForSlide = false;
+    }
+}
+void UTechdarkness_RealCMC::Input_SlideReleased()
+{
+    bReadyForSlide = true;
+    StopSlide();
+}
+void UTechdarkness_RealCMC::Input_SprintPressed()  { SprintStart(); }
+void UTechdarkness_RealCMC::Input_SprintReleased() { SprintEnds(); }
 
-#if WITH_EDITOR
-	DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false, 1.f, 0.f, 2.f);
-#endif
+// --- Спринт ---
+void UTechdarkness_RealCMC::SprintStart()
+{
+    bWantsToSprint = true;
+    // Здесь можно запустить таймер дренажа стамины через OwningCharacter->HealthStaminaComponent
+}
 
-	GetWorld()->LineTraceSingleByProfile(Hit, Start, End, ProfileName, RealMoveCharacterOwner->GetIgnoreCharacterParams());
+void UTechdarkness_RealCMC::SprintEnds()
+{
+    bWantsToSprint = false;
+    MaxWalkSpeed = WalkSpeed;
+    // Тут можно завершить таймер стамины
+}
 
-	if (!Hit.bBlockingHit)
-		return;
+void UTechdarkness_RealCMC::SprintLoop()
+{
+    if (!OwningCharacter) return;
+    // Вызов OwningCharacter->HealthStaminaComponent->DrainStamina(...) при необходимости
+}
 
-	TArray<FHitResult, TSizedDefaultAllocator<32>> HitUp;
-	FVector StartUp = Hit.Location;
-	float heightParkour = 200.f;
-	FVector EndUp = StartUp + FVector::UpVector * heightParkour;
+// --- Слайд ---
+void UTechdarkness_RealCMC::StartSlide()
+{
+    if (bIsSliding || !OwningCharacter || IsFalling())
+    {
+        return;
+    }
+    
+    float Now = GetWorld()->GetTimeSeconds();
+    if (Now - LastSlideEndTime < SlideCooldown) return;
 
-	GetWorld()->LineTraceMultiByProfile(HitUp, EndUp, StartUp, ProfileName, RealMoveCharacterOwner->GetIgnoreCharacterParams());
+    bIsSliding = true;
+    DefaultCapsuleHalfHeight = OwningCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+    DefaultGroundFriction = GroundFriction;
+    DefaultBrakingFriction = BrakingFrictionFactor;
 
-#if WITH_EDITOR
-	DrawDebugLine(GetWorld(), EndUp, StartUp, FColor::Yellow, false, 1.f, 0.f, 2.f);
-#endif
+    BrakingFrictionFactor = SlideFriction;
+    GroundFriction = SlideFriction;
+    OwningCharacter->GetCapsuleComponent()->SetCapsuleHalfHeight(SlideCapsuleHalfHeight);
 
-	for (FHitResult h : HitUp) {
-		if (h.bBlockingHit) {
-#if WITH_EDITOR
-			DrawDebugSphere(GetWorld(), h.Location, 10, 10, FColor::Orange, 0.f, 2.f);
-#endif
-			const FVector TeleportLocation = h.Location + CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * FVector::UpVector;
-			FCollisionQueryParams Params;
-			Params.AddIgnoredActor(CharacterOwner);
+    Velocity = OwningCharacter->GetActorForwardVector() * SlideImpulse;
+    EnterSlide();
 
-			bool bHasOverlap = GetWorld()->OverlapAnyTestByChannel(
-				TeleportLocation,
-				FQuat::Identity,
-				ECC_Pawn,
-				FCollisionShape::MakeCapsule(
-					CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleRadius(),
-					CharacterOwner->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight()
-				),
-				Params);
+    GetWorld()->GetTimerManager().SetTimer(SlideTimerHandle, this, &UTechdarkness_RealCMC::StopSlide, MaxSlideTime, false);
+}
 
-			if (!bHasOverlap) {
-				CharacterOwner->TeleportTo(TeleportLocation, CharacterOwner->GetActorRotation());
-			}
-		}
-	}
+void UTechdarkness_RealCMC::StopSlide()
+{
+    if (!bIsSliding) return;
+    bIsSliding = false;
+    LastSlideEndTime = GetWorld()->GetTimeSeconds();
+
+    if (OwningCharacter)
+        OwningCharacter->GetCapsuleComponent()->SetCapsuleHalfHeight(DefaultCapsuleHalfHeight);
+    GroundFriction = DefaultGroundFriction;
+    BrakingFrictionFactor = DefaultBrakingFriction;
+
+    ExitSlide();
+    GetWorld()->GetTimerManager().ClearTimer(SlideTimerHandle);
 }
 
 void UTechdarkness_RealCMC::EnterSlide()
 {
-	bWantsToCrouch = true;
-	Velocity += Velocity.GetSafeNormal2D() * Slide_EnterImpulse; // вернул импульс для старта
-	SetMovementMode(MOVE_Custom, CMOVE_Slide);
+    SetMovementMode(MOVE_Custom, CMOVE_Slide);
 }
 
 void UTechdarkness_RealCMC::ExitSlide()
 {
-	bWantsToCrouch = bCrouchPressed;
-	FQuat NewRotation = FRotationMatrix::MakeFromXZ(UpdatedComponent->GetForwardVector().GetSafeNormal2D(), FVector::UpVector).ToQuat();
-	FHitResult Hit;
-	SafeMoveUpdatedComponent(FVector::ZeroVector, NewRotation, true, Hit);
-	SetMovementMode(MOVE_Walking);
+    SetMovementMode(MOVE_Walking); // Вернуться к обычному режиму ходьбы
 }
 
 void UTechdarkness_RealCMC::PhysSlide(float deltaTime, int32 Iterations)
 {
-	if (deltaTime < MIN_TICK_TIME) {
-		return;
-	}
+    if (deltaTime < MIN_TICK_TIME) return;
 
-	RestorePreAdditiveRootMotionVelocity();
+    FHitResult surfaceHit;
+    if (!GetSlideSurface(surfaceHit) || Velocity.Size() < 200.f)
+    {
+        StopSlide();
+        StartNewPhysics(deltaTime, Iterations);
+        return;
+    }
 
-	FHitResult surfaceHit;
-	if (!GetSlideSurface(surfaceHit) || Velocity.SizeSquared() < FMath::Square(Slide_MinSpeed)) {
-		ExitSlide();
-		StartNewPhysics(deltaTime, Iterations);
-		return;
-	}
+    Velocity += FVector::DownVector * 980.0f * deltaTime; // Gravity
 
-	Velocity += Slide_GravityForce * FVector::DownVector * deltaTime;
+    FVector Adjusted = Velocity * deltaTime;
+    SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentRotation().Quaternion(), true, surfaceHit);
 
-	if (FMath::Abs(FVector::DotProduct(Acceleration.GetSafeNormal(), UpdatedComponent->GetRightVector())) > 0.5f) {
-		Acceleration = Acceleration.ProjectOnTo(UpdatedComponent->GetRightVector());
-	} else {
-		Acceleration = FVector::ZeroVector;
-	}
-
-	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity()) {
-		CalcVelocity(deltaTime, Slide_Friction, true, GetMaxBrakingDeceleration());
-	}
-
-	ApplyRootMotionToVelocity(deltaTime);
-
-	FVector OldLocation = UpdatedComponent->GetComponentLocation();
-	FQuat OldRotation = UpdatedComponent->GetComponentRotation().Quaternion();
-
-	FHitResult Hit(1.f);
-	FVector Adjusted = Velocity * deltaTime;
-	FVector VelPlaneDir = FVector::VectorPlaneProject(Velocity, surfaceHit.Normal).GetSafeNormal();
-	FQuat NewRotation = FRotationMatrix::MakeFromXZ(VelPlaneDir, surfaceHit.Normal).ToQuat();
-	SafeMoveUpdatedComponent(Adjusted, NewRotation, true, Hit);
-
-	if (Hit.Time < 1.f) {
-		HandleImpact(Hit, deltaTime, Adjusted);
-		SlideAlongSurface(Adjusted, 1.f - Hit.Time, Hit.Normal, Hit, true);
-	}
-
-	FHitResult NewSurfaceHit;
-	if (!GetSlideSurface(NewSurfaceHit) || Velocity.SizeSquared() < FMath::Square(Slide_MinSpeed)) {
-		ExitSlide();
-	}
-
-	if (!bJustTeleported && !HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity()) {
-		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime;
-	}
+    if (surfaceHit.bBlockingHit)
+        SlideAlongSurface(Adjusted, 1.f - surfaceHit.Time, surfaceHit.Normal, surfaceHit, true);
 }
 
 bool UTechdarkness_RealCMC::GetSlideSurface(FHitResult& Hit) const
 {
-	FVector Start = UpdatedComponent->GetComponentLocation();
-	FVector End = Start + CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight() * 2.0f * FVector::DownVector;
-	FName ProfileName = TEXT("BlockAll");
-
-	return GetWorld()->LineTraceSingleByProfile(Hit, Start, End, ProfileName, RealMoveCharacterOwner ? RealMoveCharacterOwner->GetIgnoreCharacterParams() : FCollisionQueryParams());
-}
-
-void UTechdarkness_RealCMC::SprintPressed()
-{
-	bWantsToSprint = true;
-}
-
-void UTechdarkness_RealCMC::SprintReleased()
-{
-	bWantsToSprint = false;
-}
-
-void UTechdarkness_RealCMC::CrouchPressed()
-{
-	bWantsToCrouch = true;
-	bCrouchPressed = true;
-}
-
-void UTechdarkness_RealCMC::CrouchReleased()
-{
-	bWantsToCrouch = false;
-	bCrouchPressed = false;
+    if (!OwningCharacter) return false;
+    FVector Start = UpdatedComponent->GetComponentLocation();
+    FVector End = Start + FVector::DownVector * (DefaultCapsuleHalfHeight + 10.f);
+    return GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility);
 }
 
 bool UTechdarkness_RealCMC::IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const
 {
-	return MovementMode == MOVE_Custom && CustomMovementMode == InCustomMovementMode;
+    return MovementMode == MOVE_Custom && CustomMovementMode == InCustomMovementMode;
 }
