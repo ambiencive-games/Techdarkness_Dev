@@ -45,7 +45,14 @@ void UTechdarkness_RealCMC::OnMovementUpdated(float DeltaSeconds, const FVector&
 void UTechdarkness_RealCMC::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
 {
     if (IsCustomMovementMode(CMOVE_Slide) && MovementMode == MOVE_Falling)
+    {
         StopSlide();
+    }
+    if(IsFalling())
+    {
+        FVector ActorBottom = OwningCharacter->GetActorLocation() - FVector(0, 0, OwningCharacter->GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+        FallStartLocation = ActorBottom;
+    }
 }
 
 void UTechdarkness_RealCMC::UpdateCharacterStateBeforeMovement(float DeltaSeconds)

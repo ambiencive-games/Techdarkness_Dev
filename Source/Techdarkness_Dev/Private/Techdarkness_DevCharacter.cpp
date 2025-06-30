@@ -42,6 +42,9 @@ void ATechdarkness_DevCharacter::BeginPlay()
     // Сохраняем стартовые скорости
     BaseSpeed = GetCharacterMovement()->MaxWalkSpeed;
 
+    HealthStaminaComponent->SetMaxHealth(200.f);
+    HealthStaminaComponent->SetHealth(200.f);  
+
     // Input mapping (для EnhancedInputSubsystems)
     if (APlayerController* PC = Cast<APlayerController>(Controller))
     {
@@ -294,4 +297,34 @@ void ATechdarkness_DevCharacter::OnSprintReleased(const FInputActionInstance& In
     {
         MoveComp->Input_SprintReleased();
     }
+}
+
+void ATechdarkness_DevCharacter::Landed(const FHitResult& Hit)
+{
+    Super::Landed(Hit);
+
+    const float Epsilon = 5.f;
+    const float SafeHeight = 384.f;
+    const float FatalHeight = 1000.f;
+
+    FVector ActorBottom = GetActorLocation() - FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+
+    UTechdarkness_RealCMC* MoveComp = Cast<UTechdarkness_RealCMC>(GetCharacterMovement());
+    if (!MoveComp || !HealthStaminaComponent)
+    {
+        return;
+    }
+
+    float FallDistance = FMath::Abs(MoveComp->FallStartLocation.Z - ActorBottom.Z);
+
+    if (FallDistance <= SafeHeight + Epsilon)
+    {
+        return; 
+    }
+
+    // Округление не обязательно, но с ним более читаемый урон
+    float DamagePercent = (FMath::Clamp(FallDistance, SafeHeight, FatalHeight) - SafeHeight) / (FatalHeight - SafeHeight);
+    float Damage = FMath::RoundToFloat(DamagePercent * HealthStaminaComponent->GetMaxHealth());
+
+    HealthStaminaComponent->TakeDamage(Damage);
 }

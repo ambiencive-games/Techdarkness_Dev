@@ -61,6 +61,9 @@ public:
     bool bReadyForSlide = true;
     FTimerHandle SlideTimerHandle;
 
+    // --- Fall ---
+    FVector FallStartLocation = FVector::ZeroVector;
+
     UPROPERTY(Transient)
     class ATechdarkness_DevCharacter* OwningCharacter = nullptr; // Владелец
 

@@ -16,6 +16,7 @@ void ATEST_ACTOR::BeginPlay()
 
 	// Подписка на событие начала оверлапа
 	OnActorBeginOverlap.AddDynamic(this, &ATEST_ACTOR::OnOverlapBegin);
+
 }
 
 void ATEST_ACTOR::Tick(float DeltaTime)
@@ -29,15 +30,11 @@ void ATEST_ACTOR::OnOverlapBegin(AActor* OverlappedActor, AActor* OtherActor)
 
 	if (ATechdarkness_DevCharacter* PlayerCharacter = Cast<ATechdarkness_DevCharacter>(OtherActor))
 	{
-		if (UTechdarkness_DevHealthStaminaComponent* Techdarkness_DevHealthStaminaComponent = PlayerCharacter->FindComponentByClass<UTechdarkness_DevHealthStaminaComponent>())
+		if (PlayerCharacter->HealthStaminaComponent)
 		{
-			Techdarkness_DevHealthStaminaComponent->TakeDamage(DamageAmount);
+			PlayerCharacter->HealthStaminaComponent->TakeDamage(DamageAmount);
 			UE_LOG(LogTemp, Warning, TEXT("Player took damage: %f"), DamageAmount);
-			UE_LOG(LogTemp, Warning, TEXT("Player's current health: %f"), Techdarkness_DevHealthStaminaComponent->GetHealth());
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Techdarkness_DevHealthStaminaComponent not found!"));
+			UE_LOG(LogTemp, Warning, TEXT("Player's current health: %f"), PlayerCharacter->HealthStaminaComponent->GetHealth());
 		}
 	}
 }

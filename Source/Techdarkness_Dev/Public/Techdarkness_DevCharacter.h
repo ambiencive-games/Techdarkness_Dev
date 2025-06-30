@@ -68,6 +68,7 @@ protected:
     virtual void BeginPlay() override;
     virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
     virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode) override;
+    virtual void Landed(const FHitResult& Hit) override;
 
     void Move(const FInputActionValue& Value);
     void Look(const FInputActionValue& Value);

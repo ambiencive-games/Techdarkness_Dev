@@ -39,3 +39,19 @@ void UTechdarkness_DevHealthStaminaComponent::RestoreStamina(float StaminaAmount
 	if (CurrentStamina >= MaxStamina || StaminaAmount <= 0.f) return;
 	CurrentStamina = FMath::Clamp(CurrentStamina + StaminaAmount, 0.f, MaxStamina);
 }
+
+void UTechdarkness_DevHealthStaminaComponent::SetMaxHealth(float NewMaxHealth)
+{
+    MaxHealth = FMath::Max(1.0f, NewMaxHealth);
+}
+
+void UTechdarkness_DevHealthStaminaComponent::SetHealth(float NewHealth)
+{
+    CurrentHealth = FMath::Clamp(NewHealth, 0.0f, MaxHealth);
+}
+
+void UTechdarkness_DevHealthStaminaComponent::SetStamina(float NewStamina)
+{
+	MaxStamina = FMath::Max(1.0f, NewStamina);
+    CurrentStamina = MaxStamina;
+}
