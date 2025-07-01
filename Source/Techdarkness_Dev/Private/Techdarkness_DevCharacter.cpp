@@ -86,7 +86,7 @@ void ATechdarkness_DevCharacter::SetupPlayerInputComponent(UInputComponent* Play
             EnhancedInput->BindAction(ClimbAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::TryClimb);
         }
 
-        // --- Скользжение (Slide) ---
+        // --- Скольжение (Slide) ---
         if (SlideAction)
         {
             EnhancedInput->BindAction(SlideAction, ETriggerEvent::Started, this, &ATechdarkness_DevCharacter::OnSlideStarted);
