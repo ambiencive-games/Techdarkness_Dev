@@ -13,11 +13,9 @@
   <component name="ChangeListManager">
     <list default="true" id="03e69c51-2b36-4212-9a1e-b1450076316a" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.Techdarkness_Dev/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.Techdarkness_Dev/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.vsconfig" beforeDir="false" afterPath="$PROJECT_DIR$/.vsconfig" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Config/DefaultEditor.ini" beforeDir="false" afterPath="$PROJECT_DIR$/Config/DefaultEditor.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Content/Dynamic/Maps/Testing/Map_CodeTest.umap" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Dynamic/Maps/Testing/Map_CodeTest.umap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_DevCharacter.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Source/Techdarkness_Dev/Private/Techdarkness_DevCharacter.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Techdarkness_Dev.uproject" beforeDir="false" afterPath="$PROJECT_DIR$/Techdarkness_Dev.uproject" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Character/BP_Techdarkness_DevCharacter.uasset" beforeDir="false" afterPath="$PROJECT_DIR$/Content/Character/BP_Techdarkness_DevCharacter.uasset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Character/ThirdPerson/Mannequins/Animations/ABP_Manny.uasset" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Content/Character/ThirdPerson/Mannequins/Animations/BS_Manny.uasset" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -536,6 +534,8 @@
       <workItem from="1751364841475" duration="133000" />
       <workItem from="1751365571844" duration="296000" />
       <workItem from="1751365886120" duration="290000" />
+      <workItem from="1751389756210" duration="626000" />
+      <workItem from="1751711615639" duration="3767000" />
     </task>
     <servers />
   </component>
